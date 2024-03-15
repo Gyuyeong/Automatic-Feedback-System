@@ -1,33 +1,105 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
-}
-
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  color: #263747;
+  overflow-x: hidden;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+.main {
+  min-height: calc(100vh);
+}
+
+.main-section {
+  display: flex;
+  flex-direction: row;
+  height: calc( 100vh );
+  background-color: #222;
+  padding: 0;
+  margin: 0;
+}
+
+.guide-section {
+  width: calc(20% - 4px);
+  background-color: #333;
+}
+
+.guide-title {
+  background-color: #111;
+  height: fit-content;
+  font-size: large;
+  font-weight: bold;
+  color: gray;
+  padding: 10px;
+  text-align: left;
+}
+
+.title-text {
+  color: white;
+  background-color: inherit;
+  text-align: left;
+  font-weight: bolder;
+  padding: 10px;
+}
+
+.scrollable-container {
+  overflow-y: scroll;
+  color: #888;
+  font-weight: bold;
+  font-size: 15px;
+  white-space: pre-wrap;
+  text-align: left;
+  padding: 10px;
+  padding-bottom: 15px;
+}
+
+.scrollable-container::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scrollable-container::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 10px;
+}
+
+.scrollable-container::-webkit-scrollbar-track {
+  background: #333;
+}
+
+.gutter {
+  width: 24px;
+  cursor: ew-resize;
+  background-color: #333;
+}
+
+.run-section {
+  display: flex;
+  flex-direction: column;
+  width: 50%;
+  background-color: #222222;
+}
+
+.copy-and-save-section {
+  display: flex;
+  padding-left: 10px;
+  padding-right: 10px;
+  height: 45px;
+  margin: 0;
+  justify-content: space-between;
+  background-color: #777;
+  align-items: center;
+}
+
+.result-section {
+  flex: 1;
+}
+
+.result-title {
+  background-color: #111;
+  justify-content: space-between;
+  font-size: large;
+  font-weight: bold;
+  color: gray;
+  padding: 10px;
+  text-align: left; 
 }
