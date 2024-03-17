@@ -4,6 +4,7 @@ import { ChakraProvider } from "@chakra-ui/react";
 import RunSection from "./run-section";
 import ResultSection from "./result-section";
 import { PythonShell } from "python-shell";
+import json_src from '../../parsed_python_file.json';
 
 // write the written code to local file
 const writeToFile = data => {
@@ -20,7 +21,7 @@ const writeToFile = data => {
 
 // run the code
 const runCode = async () => {
-  let result = await PythonShell.run('run.py', {
+  let result = await PythonShell.run('parse_turtle.py', {
     mode: 'text',
     scriptPath: './',
   }).then((results) => {
@@ -82,7 +83,7 @@ export default async function Home({ params, searchParams }) {
                 <RunSection></RunSection>
               </div>
               <div className="result-section">
-                <ResultSection result={result}></ResultSection>
+                <ResultSection result={result} json_src={json_src}></ResultSection>
               </div>
             </div>
           </div>
