@@ -38,7 +38,9 @@ const EditorButton = ({ text, updateCodeValue, editorRef }) => {
         if (codeValue) {
           updateCodeValue(codeValue);
           if (text === "실행") {
-            console.log(codeValue);
+            Sk.configure({
+              __future__: Sk.python3  // Python 3
+            });
             var mypre = document.getElementById("output");
             mypre.innerHTML = "";
             Sk.pre = "output";
