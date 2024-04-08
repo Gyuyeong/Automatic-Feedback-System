@@ -30,7 +30,9 @@ export default async function Home({ params, searchParams }) {
 
   const codeValue = searchParams["codeValue"] ? decodeURI(searchParams["codeValue"].replace(/\+/g, ' ')) : "";  // it is undefined at the start
 
-  if (codeValue !== "") {
+  console.log(codeValue);
+
+  if (codeValue !== undefined) {
     await sql`INSERT INTO Code_Results (Code) VALUES (${codeValue})`;  // insert to db
   }
 

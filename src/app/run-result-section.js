@@ -54,7 +54,7 @@ const EditorButton = ({ text, editorRef }) => {
           function (err) {
             console.log(err.toString());
             alert("Error!!\nCheck Your Code");
-            success = false;
+            success = false;  // execution failed
           }
         );
 
