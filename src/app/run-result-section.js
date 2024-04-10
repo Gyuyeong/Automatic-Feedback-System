@@ -28,15 +28,26 @@ function builtinRead(x) {
 
 
 // button for copy and execute
-const EditorButton = ({ text, editorRef }) => {
+const EditorButton = ({ text, editorRef, onExecute }) => {
   const router = useRouter();
 
   const processCode = () => {
     const codeValue = editorRef.current.getValue();  // get code value from editor
 
+    function extractImageFromCanvas(canvas) {
+      return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => {
+          if (!blob) {
+            reject(new Error("Failed to extract image from canvas."));
+            return;
+          }
+          resolve(blob);
+        }, 'image/png');
+      });
+    }
+
     if (codeValue.length > 0) {  // there must be something written there
       if (text === "실행") {
-        let success = true;  // check if successfully executed
         Sk.configure({
           __future__: Sk.python3  // Python 3
         });
@@ -48,24 +59,24 @@ const EditorButton = ({ text, editorRef }) => {
         var myPromise = Sk.misceval.asyncToPromise(function () {
           return Sk.importMainWithBody("<stdin>", false, codeValue, true);
         });
-        myPromise.then(function (mod) {
-          console.log("success");
+        myPromise.then(async function (mod) {
+          // locate turtle canvas
+          const turtleCanvasDiv = document.querySelector('#turtle_canvas');
+          const canvas = turtleCanvasDiv.querySelector('canvas');
+          const imageBlob = await extractImageFromCanvas(canvas);
+          const reader = new FileReader();
+          reader.onload = function () {
+            const imageData = reader.result;
+            onExecute(codeValue, imageData);  // save to DB
+          };
+          reader.readAsArrayBuffer(imageBlob);
+          // onExecute(codeValue, imageDataURL);  // save code to DB
         },
           function (err) {
             console.log(err.toString());
             alert("Error!!\nCheck Your Code");
-            success = false;  // execution failed
           }
         );
-
-        // push codeValue to server only if there were no errors
-        if (success) {
-          const encodedCodeValue = encodeURI(codeValue);
-          const url = `/?codeValue=${encodedCodeValue}`;
-          console.log(url);
-          router.push(url);
-        }
-
       } else {  // copy button
         console.log(codeValue);
         navigator.clipboard.writeText(codeValue);  // copy to clipboard
@@ -132,15 +143,14 @@ const ResultAccordion = ({ title, pre_id, turtle_id }) => {
   )
 }
 
-export default function RunResultSection({ value }) {
+export default function RunResultSection({ value, onExecuteSuccess }) {
   const editorRef = useRef(null);
-
   return (
     <>
       <div className="run-section">
         <div className='copy-and-save-section'>
-          <EditorButton text={'Copy'} editorRef={editorRef}></EditorButton>
-          <EditorButton text={'실행'} editorRef={editorRef}></EditorButton>
+          <EditorButton text={'Copy'} editorRef={editorRef} onExecute={null}></EditorButton>
+          <EditorButton text={'실행'} editorRef={editorRef} onExecute={onExecuteSuccess}></EditorButton>
         </div>
         <CodeEditor editorRef={editorRef} codeValue={value}></CodeEditor>
       </div>

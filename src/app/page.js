@@ -24,16 +24,18 @@ const GuideContainer = ({ titleText, height, text }) => {
   )
 }
 
-export default async function Home({ params, searchParams }) {
+export default async function Home() {
   const longText = "hello";
   const longText2 = "world";
 
-  const codeValue = searchParams["codeValue"] ? decodeURI(searchParams["codeValue"].replace(/\+/g, ' ')) : "";  // it is undefined at the start
-
-  console.log(codeValue);
-
-  if (codeValue !== undefined) {
-    await sql`INSERT INTO Code_Results (Code) VALUES (${codeValue})`;  // insert to db
+  let value;
+  // Save the code and image to DB
+  async function handleSaveCode(codeValue, pngData) {
+    "use server";  // must add this
+    if (codeValue && pngData) {
+      // console.log(codeValue);
+      await sql`INSERT INTO Code_Results (Code, Image) VALUES (${codeValue}, ${pngData})`;  // insert to db
+    }
   }
 
   return (
@@ -49,7 +51,7 @@ export default async function Home({ params, searchParams }) {
             <div className="gutter">
 
             </div>
-            <RunResultSection value={codeValue}></RunResultSection>
+            <RunResultSection value={value} onExecuteSuccess={handleSaveCode}></RunResultSection>
           </div>
         </div>
       </ChakraProvider>
