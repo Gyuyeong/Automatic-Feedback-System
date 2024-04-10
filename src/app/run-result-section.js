@@ -37,19 +37,6 @@ const EditorButton = ({ text, editorRef, onExecute }) => {
   const processCode = () => {
     const codeValue = editorRef.current.getValue();  // get code value from editor
 
-    // function to extract png blob from canvas
-    function extractImageFromCanvas(canvas) {
-      return new Promise((resolve, reject) => {
-        canvas.toBlob(blob => {
-          if (!blob) {
-            reject(new Error("Failed to extract image from canvas."));
-            return;
-          }
-          resolve(blob);
-        }, 'image/png');
-      });
-    }
-
     if (codeValue.length > 0) {  // there must be something written there
       if (text === "실행") {
         // execute Python code with Skulpt
