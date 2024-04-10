@@ -14,11 +14,14 @@ import {
   AccordionIcon,
 } from '@chakra-ui/react';
 
+
+// function used in Skulpt
 function outf(text) {
   var mypre = document.getElementById("output");
   mypre.innerHTML = mypre.innerHTML + text;
 }
 
+// function used in Skulpt
 function builtinRead(x) {
   if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined) {
     throw "File not found: '" + x + "'";
@@ -29,11 +32,12 @@ function builtinRead(x) {
 
 // button for copy and execute
 const EditorButton = ({ text, editorRef, onExecute }) => {
-  const router = useRouter();
+  // const router = useRouter();
 
   const processCode = () => {
     const codeValue = editorRef.current.getValue();  // get code value from editor
 
+    // function to extract png blob from canvas
     function extractImageFromCanvas(canvas) {
       return new Promise((resolve, reject) => {
         canvas.toBlob(blob => {
@@ -48,6 +52,7 @@ const EditorButton = ({ text, editorRef, onExecute }) => {
 
     if (codeValue.length > 0) {  // there must be something written there
       if (text === "실행") {
+        // execute Python code with Skulpt
         Sk.configure({
           __future__: Sk.python3  // Python 3
         });
@@ -59,20 +64,14 @@ const EditorButton = ({ text, editorRef, onExecute }) => {
         var myPromise = Sk.misceval.asyncToPromise(function () {
           return Sk.importMainWithBody("<stdin>", false, codeValue, true);
         });
-        myPromise.then(async function (mod) {
+        myPromise.then(async function (mod) {  // execute success
           // locate turtle canvas
           const turtleCanvasDiv = document.querySelector('#turtle_canvas');
           const canvas = turtleCanvasDiv.querySelector('canvas');
-          const imageBlob = await extractImageFromCanvas(canvas);
-          const reader = new FileReader();
-          reader.onload = function () {
-            const imageData = reader.result;
-            onExecute(codeValue, imageData);  // save to DB
-          };
-          reader.readAsArrayBuffer(imageBlob);
-          // onExecute(codeValue, imageDataURL);  // save code to DB
+          const imageDataURL = canvas.toDataURL('image/png');
+          onExecute(codeValue, imageDataURL);  // save code to DB
         },
-          function (err) {
+          function (err) {  // error in execution
             console.log(err.toString());
             alert("Error!!\nCheck Your Code");
           }
