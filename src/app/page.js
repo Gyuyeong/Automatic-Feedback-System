@@ -70,7 +70,7 @@ export default async function Home() {
     const fs = require('fs').promises;
     const path = require('path');
     try {
-      const svgFilePath = path.join(process.cwd(), 'public', 'code_ast.svg');
+      const svgFilePath = path.join(process.cwd(), 'public', 'code_ast_1.svg');
       await fs.writeFile(svgFilePath, '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg"></svg>')
     } catch (error) {
       console.error("Error overwriting SVG file:", error);
@@ -83,7 +83,23 @@ export default async function Home() {
     const path = require('path');
     try {
       const turtleCodeFilePath = path.join(process.cwd(), 'scripts', 'turtle_code.py');
+      const turtleCodeTraceFilePath = path.join(process.cwd(), 'scripts', 'turtle_code_trace.py');
+      let lines = codeValue.trim().split('\r\n');
+      // ======== need to revise for more robustness ======== //
+      lines.shift();  // remove 'from turtle import *'
+      // ======== need to revise for more robustness ======== //
+      let traceLines = [
+        'from unittest.mock import Mock',
+        'import turtle',
+        'from turtle import *',
+        'turtle.Screen = Mock()',
+        'turtle.Turtle = Mock()',
+        'screen = turtle.Screen()',
+        ...lines
+      ];
+      const traceCodeValue = traceLines.join('\r\n');
       await fs.writeFile(turtleCodeFilePath, codeValue);
+      await fs.writeFile(turtleCodeTraceFilePath, traceCodeValue);
     } catch (error) {
       console.error("Error writing code:", error);
     }
@@ -91,37 +107,47 @@ export default async function Home() {
 
   async function getExecutionTrace(codeValue) {
     "use server";
-    if (codeValue) {
-      writeTurtleCodeToFile(codeValue);  // write turtle code to file
-      const commandWindows = 'python -m trace -t ./scripts/turtle_code.py | findstr "turtle_code.py"';  // Windows
-      const commandLinux = 'python -m trace -t ./scripts/turtle_code.py | grep turtle_code.py';  // linux
-
-      exec(commandWindows, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`exec error: ${error}`);
-          return;
-        }
-
-        if (stderr) {
-          console.error(`stderr: ${stderr}`);
-          return;
-        }
-
-        let lines = stdout.split('\r\n');
-        let regex = /turtle_code\.py\(\d+\): (.+)/;
-
-        for (let i = 0; i < lines.length; i++) {
-          let match = lines[i].match(regex);
-
-          if (match) {
-            let lineOfCode = match[1];
-            console.log(lineOfCode);
+    return new Promise((resolve, reject) => {
+      if (codeValue) {
+        writeTurtleCodeToFile(codeValue);  // write turtle code to file
+        const commandWindows = 'python -m trace -t ./scripts/turtle_code_trace.py | findstr "turtle_code_trace.py"';  // Windows
+        const commandLinux = 'python -m trace -t ./scripts/turtle_code_trace.py | grep turtle_code_trace.py';  // linux
+  
+        exec(commandWindows, (error, stdout, stderr) => {
+          if (error) {
+            console.error(`exec error: ${error}`);
+            resolve(0);
+            return;
           }
-        }
-        return;
-      });
-    }
-
+  
+          if (stderr) {
+            console.error(`stderr: ${stderr}`);
+            resolve(0);
+            return;
+          }
+  
+          let lines = stdout.split('\r\n');
+          let regex = /turtle_code_trace\.py\(\d+\): (.+)/;
+  
+          for (let i = 0; i < lines.length; i++) {
+            let match = lines[i].match(regex);
+  
+            if (match) {
+              let lineOfCode = match[1];
+              console.log(lineOfCode);
+            }
+          }
+          // ====== need to come up with a good logic to generate the correct number of images ====== //
+          const numImages = 5;  // will change
+          // ====== need to come up with a good logic to generate the correct number of images ====== //
+          resolve(numImages);
+          return numImages;
+        });
+      } else {
+        resolve(0);
+        return 0;
+      }
+    })
   }
 
   return (

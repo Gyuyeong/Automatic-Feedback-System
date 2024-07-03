@@ -3,25 +3,15 @@ import base64
 import graphviz
 
 code = """
-import turtle
-
-anms = turtle.Turtle()
-anms.color("red", "yellow")
-anms.speed(100)
-anms.fd(-150)
-
-anms.begin_fill()
-
-for i in range(90):
-    anms.forward(300)
-    anms.left(170)
-
-anms.end_fill()
-
-turtle.mainloop()
+from turtle import *
+def run():
+    fd(100)
+    left(90)
+for i in range(4):
+    run()
 """
 
-tree = ast.parse(code)
+tree = ast.parse(code.strip())
 visited_nodes = set()
 visited_edges = set()
 
@@ -34,6 +24,11 @@ exclude_names = ['Import', 'ImportFrom', 'Load', 'Store']
 
 while stack:
     parent_id, current_node = stack.pop()
+    try:
+        lineno = current_node.lineno
+        print(lineno, current_node.__class__.__name__)
+    except:
+        pass
     current_id = id(current_node)
     graph.node(str(current_id), label=str(current_node.__class__.__name__))
     if parent_id is not None:

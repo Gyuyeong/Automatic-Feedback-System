@@ -5,6 +5,7 @@ import Editor from '@monaco-editor/react';
 import { useState, useRef } from 'react';
 import { Button } from '@chakra-ui/react';
 import { Box } from "@chakra-ui/react";
+import { Flex, Spacer } from '@chakra-ui/react';
 import {
   Accordion,
   AccordionItem,
@@ -31,7 +32,7 @@ function builtinRead(x) {
 
 
 // button for copy and execute
-const EditorButton = ({ text, editorRef, onExecute, generateASTGraph, getExecutionTrace }) => {
+const EditorButton = ({ text, editorRef, onExecute, generateASTGraph, getExecutionTrace, setNumImages }) => {
   // const router = useRouter();
 
   const processCode = () => {
@@ -59,7 +60,12 @@ const EditorButton = ({ text, editorRef, onExecute, generateASTGraph, getExecuti
 
           onExecute(codeValue, imageDataURL);  // save code to DB
           generateASTGraph(codeValue);  // save AST graph to .dot
-          getExecutionTrace(codeValue);
+          try {
+            let numImages = await getExecutionTrace(codeValue);
+            setNumImages(numImages);
+          } catch (error) {
+            console.error("Error getting execution trace result:", error);
+          }
         },
           function (err) {  // error in execution
             console.log(err.toString());
@@ -108,22 +114,58 @@ function CodeEditor({ editorRef, codeValue }) {
   );
 }
 
-// Stores the results
-const ResultAccordion = ({ title, pre_id, turtle_id, overwriteEmptySvg }) => {
-  const [svgSrc, setSvgSrc] = useState('/code_ast.svg');
+const TurtleAccordion = ({ title }) => {
+  return (
+    <Accordion allowToggle bg="#111" border="none">
+      <AccordionItem>
+        <h2>
+          <AccordionButton bg='#111' color='gray' _expanded={{ bg: '#111', color: 'white' }}>
+            <Box as="span" flex='1' textAlign='left' fontSize="large" fontWeight="bold" ml="1px">
+              {title}
+            </Box>
+            <AccordionIcon />
+          </AccordionButton>
+        </h2>
+        <AccordionPanel bg="#fff" margin='10px'>
+          <pre id="output">
 
-  const fetchSvgFile = async () => {
-    try {
-      const response = await fetch('/code_ast.svg');
-      if (response.ok) {
-        const svgData = await response.text();
-        setSvgSrc(`data:image/svg+xml;base64,${btoa(svgData)}`);
-      } else {
-        console.error("Failed to fetch SVG file");
+          </pre>
+          <div id="turtle_canvas"></div>
+        </AccordionPanel>
+      </AccordionItem>
+    </Accordion>
+  )
+}
+
+// Stores the results
+const ResultAccordion = ({ title, pre_id, overwriteEmptySvg, numImages }) => {
+  const [svgSrcs, setSvgSrcs] = useState(['/code_ast.svg']);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const fetchSvgFiles = async () => {
+    const svgFiles = [];
+    for (let i = 1; i <= numImages; i++) {
+      try {
+        const response = await fetch(`code_ast_${i}.svg`);
+        if (response.ok) {
+          const svgData = await response.text();
+          svgFiles.push(`data:image/svg+xml;base64,${btoa(svgData)}`);
+        } else {
+          console.log(`Failed to fetch SVG file code_ast_${i}.svg`);
+        }
+      } catch (error) {
+        console.error(`Error fetching SVG file code_ast_${i}.svg`, error);
       }
-    } catch (error) {
-      console.error("Error fetching SVG file:", error);
     }
+    setSvgSrcs(svgFiles);
+  };
+
+  const handleNextImage = () => {
+    setCurrentIndex((prevIndex) => (prevIndex + 1) % svgSrcs.length);
+  };
+
+  const handlePrevImage = () => {
+    setCurrentIndex((prevIndex) => (prevIndex - 1 + svgSrcs.length) % svgSrcs.length);
   }
 
   useEffect(() => {
@@ -132,11 +174,10 @@ const ResultAccordion = ({ title, pre_id, turtle_id, overwriteEmptySvg }) => {
     }
   }, []);
 
-  // refresh the AST graphics when it changes
   useEffect(() => {
-    const intervalId = setInterval(fetchSvgFile, 2000);
+    const intervalId = setInterval(fetchSvgFiles, 2000);
     return () => clearInterval(intervalId);
-  }, [svgSrc]);
+  }, [numImages])
 
   return (
     <Accordion allowToggle bg="#111" border="none">
@@ -150,15 +191,16 @@ const ResultAccordion = ({ title, pre_id, turtle_id, overwriteEmptySvg }) => {
           </AccordionButton>
         </h2>
         <AccordionPanel bg="#fff" margin='10px'>
-          {pre_id === 'structure' && (
-            <pre id={pre_id}>
-              <img src={svgSrc} alt="AST"></img>
-            </pre>
+          {svgSrcs.length > 1 && (
+            <Flex justifyContent="center" alignItems="center">
+              <Button onClick={handlePrevImage}>&lt;</Button>
+              <Spacer/>
+              <Button onClick={handleNextImage}>&gt;</Button>
+            </Flex>
           )}
           <pre id={pre_id}>
-
+            <img src={svgSrcs[currentIndex]}></img>
           </pre>
-          <div id={turtle_id}></div>
         </AccordionPanel>
       </AccordionItem>
     </Accordion>
@@ -167,6 +209,7 @@ const ResultAccordion = ({ title, pre_id, turtle_id, overwriteEmptySvg }) => {
 
 export default function RunResultSection({ value, onExecuteSuccess, generateASTGraph, overwriteEmptySvg, getExecutionTrace }) {
   const editorRef = useRef(null);
+  const [numImages, setNumImages] = useState(1);
   return (
     <>
       <div className="run-section">
@@ -176,28 +219,30 @@ export default function RunResultSection({ value, onExecuteSuccess, generateASTG
             editorRef={editorRef} 
             onExecute={null} 
             generateASTGraph={null}
+            getExecutionTrace={null}
+            setNumImages={null}
           ></EditorButton>
           <EditorButton 
             text={'실행'} 
             editorRef={editorRef} 
             onExecute={onExecuteSuccess}
             generateASTGraph={generateASTGraph}
-            getExecutionTrace={getExecutionTrace}></EditorButton>
+            getExecutionTrace={getExecutionTrace}
+            setNumImages={setNumImages}
+            ></EditorButton>
         </div>
         <CodeEditor editorRef={editorRef} codeValue={value}></CodeEditor>
       </div>
       <div className="result-section">
         <div className='result-section'>
-          <ResultAccordion 
-            title={"실행 결과"} 
-            pre_id="output" 
-            turtle_id="turtle_canvas" 
-            overwriteEmptySvg={null}></ResultAccordion>
+          <TurtleAccordion
+            title={"실행 결과"}>
+          </TurtleAccordion>
           <ResultAccordion 
             title={"코드 구조 및 실행 순서"} 
             pre_id="structure" 
-            turtle_id={null} 
-            overwriteEmptySvg={overwriteEmptySvg}></ResultAccordion>
+            overwriteEmptySvg={overwriteEmptySvg}
+            numImages={numImages}></ResultAccordion>
         </div>
       </div>
     </>

@@ -2,10 +2,7 @@ import ast
 import graphviz
 import os
 import base64
-# from staticfg import CFGBuilder
 import sys
-
-# from ...transform import DefUseChain
 
 
 class GraphHint:
@@ -22,7 +19,7 @@ class GraphHint:
         graph.attr('node')
         return graph
 
-    def __get_graph(self, filepath, filename):
+    def __get_graph(self, filepath):
         with open(filepath + '.svg', 'rb') as imageFile:
             graph64 = base64.b64encode(imageFile.read()).decode()
         return graph64
@@ -33,7 +30,7 @@ class GraphHint:
         # self.visualize(graph, self.tree)
         self.ast2graph(tree, graph)
         graph.render(filename=ast_path, format='svg', cleanup=True)
-        return self.__get_graph(ast_path, ast_name)
+        return self.__get_graph(ast_path)
 
     def ast2graph(self, tree, graph):
         stack = [(None, tree)]  # A stack to keep track of nodes and their parent IDs
@@ -54,22 +51,12 @@ class GraphHint:
             # Add if node has Name
             add_current_id = str(current_id)+'_1'
             if isinstance(current_node, ast.Name):
-                # graph.node(add_current_id, label=current_node.id)
-                # graph.edge(str(current_id), add_current_id)
                 graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.id}")
             elif isinstance(current_node, ast.arg):
-                # graph.node(add_current_id, label=current_node.arg)
-                # graph.edge(str(current_id), add_current_id)
                 graph.node(str(current_id), label=f"{current_node.arg}")
             elif isinstance(current_node, ast.Constant):
-                # graph.node(add_current_id, label=str(current_node.value))
-                # graph.edge(str(current_id), add_current_id)
                 graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.value}")
             elif isinstance(current_node, ast.Call):
-                # try: label = current_node.func.id
-                # except: label = current_node.func.attr
-                # graph.node(add_current_id, label=label)
-                # graph.edge(str(current_id), add_current_id)
                 try: 
                     label = current_node.func.id
                 except:
@@ -119,18 +106,6 @@ class GraphHint:
                 # stack.append((current_id, child_node))
         return graph
 
-
-    # def pdg_gen(self, tree, pdg_name, pdg_path):
-    #     graph = self.__gen_graph()
-    #     self.visualize(graph, tree)
-    #     duc = DefUseChain()
-    #     duc.visit(tree)
-    #     for def_node, use_node_set in duc.def_use_chain.items():
-    #         for use_node in use_node_set:
-    #             graph.node(str(id(use_node)), use_node.id, style='filled', fillcolor='lightgreen')
-    #             graph.edge(str(id(def_node)), str(id(use_node)), style='dashed')
-    #     graph.render(filename=pdg_path, format='png', cleanup=True)
-    #     return self.__get_graph(pdg_path, pdg_name)
     
     def visualize(self, graph, node, parent=None, skip=False):
         nodename, fillcolor = self.set_nodename_fillcolor(node)
@@ -193,28 +168,16 @@ class GraphHint:
             fillcolor = 'lightblue'
         return nodename, fillcolor
     
-    
-    # def gen_cfg(self, tree, cfg_name, cfg_path):
-    #     cfg = CFGBuilder().build('', tree)
-    #     cfg.build_visual(cfg_path, 'png', show=False)
-    #     return self.__get_graph(cfg_path, cfg_name)
-    
 
     def run(self, code):
         tree = ast.parse(code)
         self.visited_nodes = set()
         self.visited_edges = set()
 
-        ast_name = self.file_name + '_ast'
+        ast_name = self.file_name + '_ast_1'
         ast_path = os.path.join(self.file_path, ast_name)
-        # pdg_name = self.file_name + '_pdg'
-        # pdg_path = os.path.join(self.file_path, pdg_name)
-        # cfg_name = self.file_name + '_cfg'
-        # cfg_path = os.path.join(self.file_path, cfg_name)
 
         ast_base64 = self.gen_asg(tree, ast_name, ast_path)
-        # pdg_base64 = self.pdg_gen(tree, pdg_name, pdg_path)
-        # cfg_base64 = self.gen_cfg(tree, cfg_name, cfg_path)
 
         return {
             'tabs': '코드구조',
@@ -223,14 +186,6 @@ class GraphHint:
                     'filter' : '추상 구문 트리 그래프',
                     'details' : ast_base64
                 },
-                # {
-                #     'filter' : '제어 흐름 그래프',
-                #     'details' : cfg_base64
-                # },
-                # {
-                #     'filter' : '데이터 흐름 그래프',
-                #     'details' : pdg_base64
-                # }
             ]
         }
 
@@ -239,4 +194,3 @@ if __name__ == "__main__":
     g = GraphHint(file_path="./public", file_name="code")
     code = sys.stdin.read()
     result = g.run(code=code)
-    # print(result['values'][0]['details'])
