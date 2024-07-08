@@ -3,6 +3,7 @@ import graphviz
 import os
 import base64
 import sys
+import json
 
 
 class GraphHint:
@@ -25,18 +26,20 @@ class GraphHint:
         return graph64
     
 
-    def gen_asg(self, tree, ast_name, ast_path):
+    def gen_asg(self, tree, ast_path, line_number):
         graph = self.__gen_graph()
-        # self.visualize(graph, self.tree)
-        self.ast2graph(tree, graph)
+        self.ast2graph(tree, graph, line_number)
         graph.render(filename=ast_path, format='svg', cleanup=True)
         return self.__get_graph(ast_path)
 
-    def ast2graph(self, tree, graph):
+    def ast2graph(self, tree, graph, line_number):
         stack = [(None, tree)]  # A stack to keep track of nodes and their parent IDs
 
         while stack:
             parent_id, current_node = stack.pop()
+
+            current_line_number = getattr(current_node, 'lineno', -1)
+            # print(current_line_number)
 
             # Generate a unique ID for the current node based on its memory address
             current_id = id(current_node)
@@ -51,29 +54,48 @@ class GraphHint:
             # Add if node has Name
             add_current_id = str(current_id)+'_1'
             if isinstance(current_node, ast.Name):
-                graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.id}")
+                if current_line_number == line_number:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.id}", color='orange', style='filled')
+                else:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.id}")
             elif isinstance(current_node, ast.arg):
-                graph.node(str(current_id), label=f"{current_node.arg}")
+                if current_line_number == line_number:
+                    graph.node(str(current_id), label=f"{current_node.arg}", color='orange', style='filled')
+                else:
+                    graph.node(str(current_id), label=f"{current_node.arg}")
             elif isinstance(current_node, ast.Constant):
-                graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.value}")
+                if current_line_number == line_number:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.value}", color='orange', style='filled')
+                else:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.value}")
             elif isinstance(current_node, ast.Call):
                 try: 
                     label = current_node.func.id
                 except:
                     label = current_node.func.attr
-                graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{label}")
+                if current_line_number == line_number:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{label}", color='orange', style='filled')
+                else:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{label}")
             elif isinstance(current_node, ast.FunctionDef):
-                graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.name}")
+                if current_line_number == line_number:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.name}", color='orange', style='filled')
+                else:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.name}")
+            # not done implementing with class definition
             elif isinstance(current_node, ast.ClassDef):
                 graph.node(add_current_id, label=current_node.name)
                 graph.edge(str(current_id), add_current_id)
-            # elif isinstance(current_node, (ast.FunctionDef, ast.ClassDef)):
-            #     graph.node(add_current_id, label=current_node.name)
-            #     graph.edge(str(current_id), add_current_id)
             elif isinstance(current_node, (ast.UnaryOp, ast.BinOp, ast.AugAssign)):
-                graph.node(str(current_id), label=f"{current_node.__class__.__name__}\n{current_node.op.__class__.__name__}")
+                if current_line_number == line_number:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}\n{current_node.op.__class__.__name__}", color='orange', style='filled')
+                else:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}\n{current_node.op.__class__.__name__}")
             elif isinstance(current_node, (ast.Compare)):
-                graph.node(str(current_id), label=f"{current_node.__class__.__name__}\n{current_node.ops.__class__.__name__}")
+                if current_line_number == line_number:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}\n{current_node.ops.__class__.__name__}", color='orange', style='filled')
+                else:
+                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}\n{current_node.ops.__class__.__name__}")
 
             # Add child nodes to the stack
             for child_node in ast.iter_child_nodes(current_node):
@@ -105,79 +127,16 @@ class GraphHint:
                     stack.append((current_id, child_node))
                 # stack.append((current_id, child_node))
         return graph
-
-    
-    def visualize(self, graph, node, parent=None, skip=False):
-        nodename, fillcolor = self.set_nodename_fillcolor(node)
-        
-        if not skip and isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-            subgraph = graphviz.Digraph(name=f'cluster_{id(node)}')
-            subgraph.attr(label=str(node.name), style='rounded')
-            self.visualize(subgraph, node, parent, skip=True)
-            graph.subgraph(subgraph)
-        
-        node_id = str(id(node))
-        if node_id not in self.visited_nodes:
-            graph.node(node_id, nodename, style='filled', fillcolor=fillcolor)
-            self.visited_nodes.add(node_id)
-
-        if parent is not None:
-            edge = (str(id(parent)), node_id)
-            if edge not in self.visited_edges:
-                graph.edge(*edge)
-                self.visited_edges.add(edge)
-
-        for child in ast.iter_child_nodes(node):
-            if isinstance(child, ast.AST):
-                self.visualize(graph, child, node)
-            elif isinstance(child, list):
-                for gradn_child in child:
-                    if isinstance(gradn_child, ast.AST):
-                        self.visualize(graph, gradn_child, node)
-    
-    def set_nodename_fillcolor(self, node):
-        nodename = str(type(node).__name__)
-        fillcolor = 'white'
-        if isinstance(node, ast.Name):
-            nodename = str(node.id)
-            fillcolor = 'lightgreen'
-        elif isinstance(node, ast.arg):
-            nodename = str(node.arg)
-            fillcolor = 'lightgreen'
-        elif isinstance(node, ast.Eq):
-            nodename = '=='
-        elif isinstance(node, ast.NotEq):
-            nodename = '!='
-        elif isinstance(node, ast.Lt):
-            nodename = '<'
-        elif isinstance(node, ast.LtE):
-            nodename = '<='
-        elif isinstance(node, ast.Gt):
-            nodename = '>'
-        elif isinstance(node, ast.GtE):
-            nodename = '>='
-        elif isinstance(node, ast.Call):
-            try: nn = node.func.id
-            except: nn = node.func.attr
-            nodename = str(nn)
-            fillcolor = 'lightblue'
-        elif isinstance(node, ast.Constant):
-            nodename = str(node.value)
-            fillcolor = 'yellow'
-        elif isinstance(node, (ast.FunctionDef, ast.ClassDef)):
-            fillcolor = 'lightblue'
-        return nodename, fillcolor
     
 
-    def run(self, code):
-        tree = ast.parse(code)
+    def run(self, tree, idx, line_number):
         self.visited_nodes = set()
         self.visited_edges = set()
 
-        ast_name = self.file_name + '_ast_1'
+        ast_name = self.file_name + '_ast_' + str(idx + 1)
         ast_path = os.path.join(self.file_path, ast_name)
 
-        ast_base64 = self.gen_asg(tree, ast_name, ast_path)
+        ast_base64 = self.gen_asg(tree, ast_path, line_number)
 
         return {
             'tabs': '코드구조',
@@ -192,5 +151,13 @@ class GraphHint:
 
 if __name__ == "__main__":
     g = GraphHint(file_path="./public", file_name="code")
-    code = sys.stdin.read()
-    result = g.run(code=code)
+    input_data = sys.stdin.read()
+    data = json.loads(input_data)
+    code = data.get('code', '')
+    # print(code)
+    executed_line_numbers = data.get('executedSequence', [])
+    # print(executed_line_numbers[6:])
+    tree = ast.parse(code)
+    # print(executed_line_numbers[6:])
+    for idx, line_number in enumerate(executed_line_numbers[6:]):
+        result = g.run(tree=tree, idx=idx, line_number=int(line_number) - 5)

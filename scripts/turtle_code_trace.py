@@ -5,9 +5,6 @@ turtle.Screen = Mock()
 turtle.Turtle = Mock()
 screen = turtle.Screen()
 
-def run():
+for i in range(4):
     fd(100)
     left(90)
-
-for i in range(4):
-    run()

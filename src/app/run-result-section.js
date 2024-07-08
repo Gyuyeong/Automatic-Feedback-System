@@ -32,7 +32,7 @@ function builtinRead(x) {
 
 
 // button for copy and execute
-const EditorButton = ({ text, editorRef, onExecute, generateASTGraph, getExecutionTrace, setNumImages }) => {
+const EditorButton = ({ text, editorRef, onExecute, getExecutionTrace, setNumImages }) => {
   // const router = useRouter();
 
   const processCode = () => {
@@ -59,7 +59,7 @@ const EditorButton = ({ text, editorRef, onExecute, generateASTGraph, getExecuti
           const imageDataURL = canvas.toDataURL('image/png');
 
           onExecute(codeValue, imageDataURL);  // save code to DB
-          generateASTGraph(codeValue);  // save AST graph to .dot
+          // generateASTGraph(codeValue);  // save AST graph to .dot
           try {
             let numImages = await getExecutionTrace(codeValue);
             setNumImages(numImages);
@@ -176,6 +176,7 @@ const ResultAccordion = ({ title, pre_id, overwriteEmptySvg, numImages }) => {
 
   useEffect(() => {
     const intervalId = setInterval(fetchSvgFiles, 2000);
+    setCurrentIndex(0);  // reset to the first image
     return () => clearInterval(intervalId);
   }, [numImages])
 
@@ -207,9 +208,10 @@ const ResultAccordion = ({ title, pre_id, overwriteEmptySvg, numImages }) => {
   )
 }
 
-export default function RunResultSection({ value, onExecuteSuccess, generateASTGraph, overwriteEmptySvg, getExecutionTrace }) {
+export default function RunResultSection({ value, onExecuteSuccess, overwriteEmptySvg, getExecutionTrace }) {
   const editorRef = useRef(null);
   const [numImages, setNumImages] = useState(1);
+
   return (
     <>
       <div className="run-section">
@@ -218,7 +220,6 @@ export default function RunResultSection({ value, onExecuteSuccess, generateASTG
             text={'Copy'}  
             editorRef={editorRef} 
             onExecute={null} 
-            generateASTGraph={null}
             getExecutionTrace={null}
             setNumImages={null}
           ></EditorButton>
@@ -226,7 +227,6 @@ export default function RunResultSection({ value, onExecuteSuccess, generateASTG
             text={'실행'} 
             editorRef={editorRef} 
             onExecute={onExecuteSuccess}
-            generateASTGraph={generateASTGraph}
             getExecutionTrace={getExecutionTrace}
             setNumImages={setNumImages}
             ></EditorButton>

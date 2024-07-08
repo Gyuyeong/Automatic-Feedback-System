@@ -41,13 +41,20 @@ export default async function Home() {
   }
 
   // generate AST graph
-  async function generateASTGraph(codeValue) {
+  async function generateASTGraph(codeValue, executedNumberSequence) {
     "use server";
     if (codeValue) {
       const { spawn } = require('child_process');
       const pythonProcess = spawn('python', ['./scripts/graph.py']);
 
-      pythonProcess.stdin.write(codeValue);
+      const inputData = {
+        code: codeValue,
+        executedSequence: executedNumberSequence
+      };
+
+      const jsonString = JSON.stringify(inputData);
+
+      pythonProcess.stdin.write(jsonString);
       pythonProcess.stdin.end();
 
       pythonProcess.stdout.on('data', (data) => {
@@ -127,19 +134,18 @@ export default async function Home() {
           }
   
           let lines = stdout.split('\r\n');
-          let regex = /turtle_code_trace\.py\(\d+\): (.+)/;
-  
+          let executedNumberSequence = [];
           for (let i = 0; i < lines.length; i++) {
-            let match = lines[i].match(regex);
+            let match = lines[i].match(/turtle_code_trace\.py\(\d+\): (.+)/);
+            let matchNum = lines[i].match(/turtle_code_trace\.py\((\d+)\)/);
   
-            if (match) {
-              let lineOfCode = match[1];
-              console.log(lineOfCode);
+            if (match && matchNum) {
+              let lineNumber = matchNum[1];
+              executedNumberSequence.push(lineNumber);  // push line numbers in order
             }
           }
-          // ====== need to come up with a good logic to generate the correct number of images ====== //
-          const numImages = 5;  // will change
-          // ====== need to come up with a good logic to generate the correct number of images ====== //
+          const numImages = executedNumberSequence.length - 6;
+          generateASTGraph(codeValue, executedNumberSequence);
           resolve(numImages);
           return numImages;
         });
@@ -166,7 +172,6 @@ export default async function Home() {
             <RunResultSection 
               value={value} 
               onExecuteSuccess={handleSaveCode} 
-              generateASTGraph={generateASTGraph} 
               overwriteEmptySvg={overwriteEmptySvg}
               getExecutionTrace={getExecutionTrace}
             ></RunResultSection>
