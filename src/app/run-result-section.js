@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect } from "react";
-import Editor from '@monaco-editor/react';
+import CodeEditor from "./code-editor";
 import { useState, useRef } from 'react';
 import { Button } from '@chakra-ui/react';
 import { Box } from "@chakra-ui/react";
@@ -13,8 +13,7 @@ import {
   AccordionPanel,
   AccordionIcon,
 } from '@chakra-ui/react';
-// import GraphImage from "./graph-image";
-
+import { Text } from "@chakra-ui/react";
 
 // function used in Skulpt
 function outf(text) {
@@ -30,12 +29,38 @@ function builtinRead(x) {
   return Sk.builtinFiles["files"][x];
 }
 
+// utility buttons
+// copy undo save
+const UtilityButton = ({ editorRef, text, url }) => {
+  const processCode = async () => {
+    const codeValue = editorRef.current.getValue();
 
-// button for copy and execute
-const EditorButton = ({ text, editorRef, onExecute, getExecutionTrace, setNumImages }) => {
-  // const router = useRouter();
+    if (codeValue.length > 0) {
+      if (text === 'Copy') {
+        navigator.clipboard.writeText(codeValue);  // copy to clipboard
+        alert("Copied to Clipboard");
+      }
+    }
+  };
 
-  const processCode = () => {
+  const buttonStyle = {
+    backgroundImage: `url(/${url})`,
+    backgroundRepeat: 'no-repeat',
+    backgroundColor: 'inherit',
+  };
+
+  return <Button size='sm' 
+    className='copy-button' 
+    onClick={processCode} 
+    style={buttonStyle}>
+  </Button>
+}
+
+
+// button for executing code and generating ast
+const EditorButton = ({ text, editorRef, onExecute, getExecutionTrace, setNumImages, setExecutedLineNumbers, setLineAndImageMapping }) => {
+
+  const processCode = async () => {
     const codeValue = editorRef.current.getValue();  // get code value from editor
 
     if (codeValue.length > 0) {  // there must be something written there
@@ -56,26 +81,34 @@ const EditorButton = ({ text, editorRef, onExecute, getExecutionTrace, setNumIma
           // locate turtle canvas
           const turtleCanvasDiv = document.querySelector('#turtle_canvas');
           const canvas = turtleCanvasDiv.querySelector('canvas');
-          const imageDataURL = canvas.toDataURL('image/png');
-
-          onExecute(codeValue, imageDataURL);  // save code to DB
-          // generateASTGraph(codeValue);  // save AST graph to .dot
+          let imageDataURL;
           try {
-            let numImages = await getExecutionTrace(codeValue);
-            setNumImages(numImages);
+            imageDataURL = canvas.toDataURL('image/png');
           } catch (error) {
-            console.error("Error getting execution trace result:", error);
+           imageDataURL = null; 
           }
+          if (imageDataURL !== null && imageDataURL !== undefined) onExecute(codeValue, imageDataURL);  // save code to DB
         },
           function (err) {  // error in execution
             console.log(err.toString());
             alert("Error!!\nCheck Your Code");
           }
         );
-      } else {  // copy button
-        console.log(codeValue);
-        navigator.clipboard.writeText(codeValue);  // copy to clipboard
-        alert("Copied to Clipboard");
+      } else if (text == "분석") {
+        try {
+          let resultData = await getExecutionTrace(codeValue);
+          let executed_line_numbers = resultData['executed_line_numbers'];
+          let line_number_and_image_mappings = resultData['line_number_and_image_mappings'];
+          let numImages = resultData['num_images'];
+          if (numImages > 0) setNumImages(numImages);
+          else if (numImages == -1) {
+            alert("Error!!\nCheck Your Code");
+          }
+          if (setExecutedLineNumbers !== null) setExecutedLineNumbers(executed_line_numbers);
+          if (setLineAndImageMapping !== null) setLineAndImageMapping(line_number_and_image_mappings);
+        } catch (error) {
+          console.log("Error getting execution trace result:", error);
+        }
       }
     }
   }
@@ -83,35 +116,6 @@ const EditorButton = ({ text, editorRef, onExecute, getExecutionTrace, setNumIma
   return (
     <Button size="sm" colorScheme="messenger" onClick={processCode}>{text}</Button>
   )
-}
-
-function CodeEditor({ editorRef, codeValue }) {
-
-  const onMount = (editor) => {
-    editorRef.current = editor;
-    editor.focus();
-  }
-
-  return (
-    <>
-      <Editor
-        flex="1"
-        theme='vs-dark'
-        defaultLanguage="python"
-        value={codeValue}
-        onMount={onMount}
-        options={{
-          minimap: { enabled: false },
-          scrollbar: {
-            vertical: 'auto',
-            horizontal: 'auto'
-          }
-        }}
-      >
-
-      </Editor>
-    </>
-  );
 }
 
 const TurtleAccordion = ({ title }) => {
@@ -137,24 +141,25 @@ const TurtleAccordion = ({ title }) => {
   )
 }
 
-// Stores the results
-const ResultAccordion = ({ title, pre_id, overwriteEmptySvg, numImages }) => {
+// Store and show ast result
+const ResultAccordion = ({ title, pre_id, overwriteEmptySvg, numImages, executedLineNumbers, lineAndImageMapping, currentIndex, setCurrentIndex }) => {
   const [svgSrcs, setSvgSrcs] = useState(['/code_ast.svg']);
-  const [currentIndex, setCurrentIndex] = useState(0);
 
   const fetchSvgFiles = async () => {
     const svgFiles = [];
-    for (let i = 1; i <= numImages; i++) {
+    for (let i = 0; i < executedLineNumbers.length; i++) {
       try {
-        const response = await fetch(`code_ast_${i}.svg`);
+        let lineNumber = executedLineNumbers[i];
+        let filename = lineAndImageMapping[lineNumber];
+        const response = await fetch(filename);
         if (response.ok) {
           const svgData = await response.text();
           svgFiles.push(`data:image/svg+xml;base64,${btoa(svgData)}`);
         } else {
-          console.log(`Failed to fetch SVG file code_ast_${i}.svg`);
+          console.log(`Failed to fetch SVG file ${filename}`);
         }
       } catch (error) {
-        console.error(`Error fetching SVG file code_ast_${i}.svg`, error);
+        console.error(`Error fetching SVG file`, error);
       }
     }
     setSvgSrcs(svgFiles);
@@ -170,7 +175,7 @@ const ResultAccordion = ({ title, pre_id, overwriteEmptySvg, numImages }) => {
 
   useEffect(() => {
     if (overwriteEmptySvg !== undefined && overwriteEmptySvg !== null) {
-      overwriteEmptySvg();  // empty code_ast.svg on startup
+      overwriteEmptySvg();  // empty code_ast_1.svg on startup
     }
   }, []);
 
@@ -196,6 +201,8 @@ const ResultAccordion = ({ title, pre_id, overwriteEmptySvg, numImages }) => {
             <Flex justifyContent="center" alignItems="center">
               <Button onClick={handlePrevImage}>&lt;</Button>
               <Spacer/>
+              <Text>{`${currentIndex + 1}/${svgSrcs.length}`}</Text>
+              <Spacer/>
               <Button onClick={handleNextImage}>&gt;</Button>
             </Flex>
           )}
@@ -209,42 +216,107 @@ const ResultAccordion = ({ title, pre_id, overwriteEmptySvg, numImages }) => {
 }
 
 export default function RunResultSection({ value, onExecuteSuccess, overwriteEmptySvg, getExecutionTrace }) {
-  const editorRef = useRef(null);
-  const [numImages, setNumImages] = useState(1);
+  const editorRef = useRef(null);  // code editor ref
+  const [numImages, setNumImages] = useState(1);  // number of images to show for result
+  const [runSectionWidth, setRunSectionWidth] = useState(65);  // for gutter
+  const [executedLineNumbers, setExecutedLineNumbers] = useState([0]);  // executed line numbers
+  const [lineAndImageMapping, setLineAndImageMapping] = useState({0: 'code_ast.svg'});  // line number and image url mapping
+  const [currentIndex, setCurrentIndex] = useState(0);  // index of shown result image
+  const isDragging = useRef(false);
+
+  const handleMouseDown = (e) => {
+    e.preventDefault();
+    isDragging.current = true;
+    const startX = e.clientX;
+    const startWidth = runSectionWidth;
+
+    const onMouseMove = (e) => {
+      if (!isDragging.current) return;
+      const newWidth = startWidth + ((e.clientX - startX) / window.innerWidth) * 100;
+      setRunSectionWidth(Math.max(0, Math.min(100, newWidth)));
+      document.body.style.userSelect = 'none';
+    };
+
+    const onMouseUp = () => {
+      if (isDragging.current) {
+        isDragging.current = false;
+        document.body.style.userSelect = 'auto';
+      }
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp, { once: true });
+  }
 
   return (
-    <>
-      <div className="run-section">
+    <div className="container" style={{ display: 'flex', width: '100%', height: '100vh' }}>
+      <div className="run-section" style={{ width: `${runSectionWidth}%` }}>
         <div className='copy-and-save-section'>
-          <EditorButton 
-            text={'Copy'}  
-            editorRef={editorRef} 
-            onExecute={null} 
-            getExecutionTrace={null}
-            setNumImages={null}
-          ></EditorButton>
-          <EditorButton 
-            text={'실행'} 
-            editorRef={editorRef} 
-            onExecute={onExecuteSuccess}
-            getExecutionTrace={getExecutionTrace}
-            setNumImages={setNumImages}
-            ></EditorButton>
+          <div className="left-buttons">
+            <UtilityButton
+              editorRef={editorRef}
+              text={'Copy'}
+              url={'copy_icon.svg'}
+            >
+            </UtilityButton>
+            <UtilityButton
+              editorRef={editorRef}
+              text={'Undo'}
+              url={'undo_icon.svg'}
+            >
+            </UtilityButton>
+            <UtilityButton
+              editorRef={editorRef}
+              text={'Save'}
+              url={'save_icon.svg'}
+            >
+            </UtilityButton>
+          </div>
+          <div className="right-buttons">
+            <EditorButton 
+              text={'실행'} 
+              editorRef={editorRef} 
+              onExecute={onExecuteSuccess}
+              getExecutionTrace={null}
+              setNumImages={null}
+              setExecutedLineNumbers={null}
+              setLineAndImageMapping={null}
+            />
+            <EditorButton
+              text={'분석'}
+              editorRef={editorRef}
+              onExecute={onExecuteSuccess}
+              getExecutionTrace={getExecutionTrace}
+              setNumImages={setNumImages}
+              setExecutedLineNumbers={setExecutedLineNumbers}
+              setLineAndImageMapping={setLineAndImageMapping}
+            />
+          </div>
         </div>
-        <CodeEditor editorRef={editorRef} codeValue={value}></CodeEditor>
+        <CodeEditor editorRef={editorRef} codeValue={value} highlightLine={executedLineNumbers[currentIndex]}/>
       </div>
-      <div className="result-section">
+      <div className="gutter" onMouseDown={handleMouseDown}>
+        <div className="line"></div>
+        <div className="line"></div>
+        <div className="line"></div>
+      </div>
+      <div className="result-section" style={{ width: `${100 - runSectionWidth}%` }}>
         <div className='result-section'>
-          <TurtleAccordion
-            title={"실행 결과"}>
-          </TurtleAccordion>
+          <TurtleAccordion title={"실행 결과"} />
           <ResultAccordion 
             title={"코드 구조 및 실행 순서"} 
             pre_id="structure" 
             overwriteEmptySvg={overwriteEmptySvg}
-            numImages={numImages}></ResultAccordion>
+            numImages={numImages}
+            executedLineNumbers={executedLineNumbers}
+            lineAndImageMapping={lineAndImageMapping}
+            currentIndex={currentIndex}
+            setCurrentIndex={setCurrentIndex}
+          />
         </div>
       </div>
-    </>
-  )
+    </div>
+  );
 }
