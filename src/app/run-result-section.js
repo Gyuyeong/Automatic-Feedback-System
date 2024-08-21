@@ -58,13 +58,21 @@ const UtilityButton = ({ editorRef, text, url }) => {
 
 
 // button for executing code and generating ast
-const EditorButton = ({ text, editorRef, onExecute, getExecutionTrace, setNumImages, setExecutedLineNumbers, setLineAndImageMapping }) => {
+const EditorButton = ({ text, editorRef, onExecute, 
+  getExecutionTrace, setNumImages, setExecutedLineNumbers, 
+  setLineAndImageMapping, overwriteEmptySvg, setExecutePressed }) => {
 
   const processCode = async () => {
     const codeValue = editorRef.current.getValue();  // get code value from editor
 
     if (codeValue.length > 0) {  // there must be something written there
       if (text === "실행") {
+        // set execute pressed to true
+        setExecutePressed(true);
+        // hide execution trace
+        overwriteEmptySvg();  // overwrite the file
+        setNumImages(1);  // set num Images to 1
+        setExecutedLineNumbers([]);  // delete all executed line number trace
         // execute Python code with Skulpt
         Sk.configure({
           __future__: Sk.python3  // Python 3
@@ -96,6 +104,8 @@ const EditorButton = ({ text, editorRef, onExecute, getExecutionTrace, setNumIma
         );
       } else if (text == "분석") {
         try {
+          // set execute pressed to false
+          setExecutePressed(false);
           let resultData = await getExecutionTrace(codeValue);
           let executed_line_numbers = resultData['executed_line_numbers'];
           let line_number_and_image_mappings = resultData['line_number_and_image_mappings'];
@@ -109,6 +119,8 @@ const EditorButton = ({ text, editorRef, onExecute, getExecutionTrace, setNumIma
         } catch (error) {
           console.log("Error getting execution trace result:", error);
         }
+      } else if (text === "비교") {
+        console.log("pressed button");
       }
     }
   }
@@ -215,15 +227,17 @@ const ResultAccordion = ({ title, pre_id, overwriteEmptySvg, numImages, executed
   )
 }
 
-export default function RunResultSection({ value, onExecuteSuccess, overwriteEmptySvg, getExecutionTrace }) {
+export default function RunResultSection({ onExecuteSuccess, overwriteEmptySvg, getExecutionTrace }) {
   const editorRef = useRef(null);  // code editor ref
-  const [numImages, setNumImages] = useState(1);  // number of images to show for result
-  const [runSectionWidth, setRunSectionWidth] = useState(65);  // for gutter
-  const [executedLineNumbers, setExecutedLineNumbers] = useState([0]);  // executed line numbers
-  const [lineAndImageMapping, setLineAndImageMapping] = useState({0: 'code_ast.svg'});  // line number and image url mapping
+  const [numImages, setNumImages] = useState(0);  // number of images to show for result
+  const [runSectionWidth, setRunSectionWidth] = useState(63);  // for gutter
+  const [executedLineNumbers, setExecutedLineNumbers] = useState([]);  // executed line numbers
+  const [lineAndImageMapping, setLineAndImageMapping] = useState({});  // line number and image url mapping
   const [currentIndex, setCurrentIndex] = useState(0);  // index of shown result image
   const isDragging = useRef(false);
+  const [executePressed, setExecutePressed] = useState(false);  // keep track of whether 실행 is pressed
 
+  // handling sliding the gutter
   const handleMouseDown = (e) => {
     e.preventDefault();
     isDragging.current = true;
@@ -233,7 +247,7 @@ export default function RunResultSection({ value, onExecuteSuccess, overwriteEmp
     const onMouseMove = (e) => {
       if (!isDragging.current) return;
       const newWidth = startWidth + ((e.clientX - startX) / window.innerWidth) * 100;
-      setRunSectionWidth(Math.max(0, Math.min(100, newWidth)));
+      setRunSectionWidth(Math.max(0, Math.min(startWidth, newWidth)));  // cannot slide below startWidth
       document.body.style.userSelect = 'none';
     };
 
@@ -280,9 +294,11 @@ export default function RunResultSection({ value, onExecuteSuccess, overwriteEmp
               editorRef={editorRef} 
               onExecute={onExecuteSuccess}
               getExecutionTrace={null}
-              setNumImages={null}
-              setExecutedLineNumbers={null}
+              setNumImages={setNumImages}
+              setExecutedLineNumbers={setExecutedLineNumbers}
               setLineAndImageMapping={null}
+              overwriteEmptySvg={overwriteEmptySvg}
+              setExecutePressed={setExecutePressed}
             />
             <EditorButton
               text={'분석'}
@@ -292,10 +308,23 @@ export default function RunResultSection({ value, onExecuteSuccess, overwriteEmp
               setNumImages={setNumImages}
               setExecutedLineNumbers={setExecutedLineNumbers}
               setLineAndImageMapping={setLineAndImageMapping}
+              overwriteEmptySvg={null}
+              setExecutePressed={setExecutePressed}
+            />
+            <EditorButton
+              text={'비교'}
+              editorRef={editorRef}
+              onExecute={null}
+              getExecutionTrace={null}
+              setNumImages={null}
+              setExecutedLineNumbers={null}
+              setLineAndImageMapping={null}
+              overwriteEmptySvg={null}
+              setExecutePressed={null}
             />
           </div>
         </div>
-        <CodeEditor editorRef={editorRef} codeValue={value} highlightLine={executedLineNumbers[currentIndex]}/>
+        <CodeEditor editorRef={editorRef} highlightLine={executedLineNumbers[currentIndex]} executePressed={executePressed}/>
       </div>
       <div className="gutter" onMouseDown={handleMouseDown}>
         <div className="line"></div>

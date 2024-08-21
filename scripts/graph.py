@@ -41,7 +41,6 @@ class GraphHint:
             parent_id, current_node = stack.pop()
 
             current_line_number = getattr(current_node, 'lineno', -1)
-            # print(current_line_number)
 
             # Generate a unique ID for the current node based on its memory address
             current_id = id(current_node)
@@ -57,9 +56,9 @@ class GraphHint:
             add_current_id = str(current_id)+'_1'
             if isinstance(current_node, ast.Name):
                 if current_line_number == line_number:
-                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.id}", color='orange', style='filled')
+                    graph.node(str(current_id), label=f"{current_node.id}", color='orange', style='filled')
                 else:
-                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.id}")
+                    graph.node(str(current_id), label=f"{current_node.id}")
             elif isinstance(current_node, ast.arg):
                 if current_line_number == line_number:
                     graph.node(str(current_id), label=f"{current_node.arg}", color='orange', style='filled')
@@ -67,18 +66,25 @@ class GraphHint:
                     graph.node(str(current_id), label=f"{current_node.arg}")
             elif isinstance(current_node, ast.Constant):
                 if current_line_number == line_number:
-                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.value}", color='orange', style='filled')
+                    graph.node(str(current_id), label=f"{current_node.value}", color='orange', style='filled')
                 else:
-                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.value}")
+                    graph.node(str(current_id), label=f"{current_node.value}")
+            elif isinstance(current_node, ast.List):
+                elements = current_node.elts
+                elements = [elt.value for elt in elements]
+                if current_line_number == line_number:
+                    graph.node(str(current_id), label=f"{elements}", color='orange', style='filled')
+                else:
+                    graph.node(str(current_id), label=f"{elements}")
             elif isinstance(current_node, ast.Call):
                 try: 
                     label = current_node.func.id
                 except:
                     label = current_node.func.attr
                 if current_line_number == line_number:
-                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{label}", color='orange', style='filled')
+                    graph.node(str(current_id), label=f"{label}", color='orange', style='filled')
                 else:
-                    graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{label}")
+                    graph.node(str(current_id), label=f"{label}")
             elif isinstance(current_node, ast.FunctionDef):
                 if current_line_number == line_number:
                     graph.node(str(current_id), label=f"{current_node.__class__.__name__}:\n{current_node.name}", color='orange', style='filled')
@@ -100,34 +106,35 @@ class GraphHint:
                     graph.node(str(current_id), label=f"{current_node.__class__.__name__}\n{current_node.ops.__class__.__name__}")
 
             # Add child nodes to the stack
-            for child_node in ast.iter_child_nodes(current_node):
-                if child_node.__class__.__name__ in self.exclude_list:
-                    continue
-                elif child_node.__class__.__name__ == "Expr":
-                    for grandchild_node in ast.iter_child_nodes(child_node):
-                        stack.append((current_id, grandchild_node))
-                elif child_node.__class__.__name__ == "Name":
-                    if isinstance(current_node, ast.Call):
-                        try:
-                            label = current_node.func.id
-                            if label != child_node.id:
+            if not isinstance(current_node, ast.List):
+                for child_node in ast.iter_child_nodes(current_node):
+                    if child_node.__class__.__name__ in self.exclude_list:
+                        continue
+                    elif child_node.__class__.__name__ == "Expr":
+                        for grandchild_node in ast.iter_child_nodes(child_node):
+                            stack.append((current_id, grandchild_node))
+                    elif child_node.__class__.__name__ == "Name":
+                        if isinstance(current_node, ast.Call):
+                            try:
+                                label = current_node.func.id
+                                if label != child_node.id:
+                                    stack.append((current_id, child_node))
+                            except:
                                 stack.append((current_id, child_node))
-                        except:
+                        else:
+                            stack.append((current_id, child_node))
+                    elif isinstance(current_node, (ast.BinOp, ast.AugAssign)):
+                        if not isinstance(child_node, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow, ast.LShift, ast.RShift, ast.BitOr, ast.BitAnd, ast.BitXor, ast.MatMult)):
+                            stack.append((current_id, child_node))
+                    elif isinstance(current_node, (ast.Compare)):
+                        if not isinstance(child_node, (ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Is, ast.IsNot, ast.In, ast.NotIn)):
+                            stack.append((current_id, child_node))
+                    elif isinstance(current_node, ast.UnaryOp):
+                        if not isinstance(child_node, (ast.UAdd, ast.USub, ast.Not, ast.Invert)):
                             stack.append((current_id, child_node))
                     else:
                         stack.append((current_id, child_node))
-                elif isinstance(current_node, (ast.BinOp, ast.AugAssign)):
-                    if not isinstance(child_node, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow, ast.LShift, ast.RShift, ast.BitOr, ast.BitAnd, ast.BitXor, ast.MatMult)):
-                        stack.append((current_id, child_node))
-                elif isinstance(current_node, (ast.Compare)):
-                    if not isinstance(child_node, (ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Is, ast.IsNot, ast.In, ast.NotIn)):
-                        stack.append((current_id, child_node))
-                elif isinstance(current_node, ast.UnaryOp):
-                    if not isinstance(child_node, (ast.UAdd, ast.USub, ast.Not, ast.Invert)):
-                        stack.append((current_id, child_node))
-                else:
-                    stack.append((current_id, child_node))
-                # stack.append((current_id, child_node))
+                    # stack.append((current_id, child_node))
         return graph
     
 
@@ -135,13 +142,13 @@ class GraphHint:
         self.visited_nodes = set()
         self.visited_edges = set()
 
-        if line_number not in global_dict:
+        if line_number not in global_dict:  # first time processing
             ast_name = self.file_name + '_ast_' + str(idx + 1)
             ast_path = os.path.join(self.file_path, ast_name)
 
             _ = self.gen_asg(tree, ast_path, line_number)
 
-        # if line_number not in global_dict:
+            # if line_number not in global_dict:
             global_dict[line_number] = ast_name + ".svg"
 
         return True
@@ -154,7 +161,7 @@ if __name__ == "__main__":
     code = data.get('code', '')
     executed_line_numbers = data.get('executedSequence', [])
 
-    tree = ast.parse(code)
+    tree = ast.parse(code)  # parse code to AST
     for idx, line_number in enumerate(executed_line_numbers[6:]):
         result = g.run(tree=tree, idx=idx, line_number=int(line_number) - 5)
 

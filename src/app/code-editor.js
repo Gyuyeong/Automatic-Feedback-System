@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 
-function CodeEditor({ editorRef, codeValue, highlightLine }) {
+function CodeEditor({ editorRef, highlightLine, executePressed }) {
   const decorationsRef = useRef([]);
 
   const applyHighlight = useCallback((monacoEditor, shouldHighlight = true) => {
@@ -53,7 +53,7 @@ function CodeEditor({ editorRef, codeValue, highlightLine }) {
     const model = monacoEditor.getModel();
     if (model) {
       if (highlightLine > 0) {
-        applyHighlight(monacoEditor);
+        applyHighlight(monacoEditor, !executePressed);
       }
 
       // Listen for content changes and clear highlight if necessary
@@ -71,11 +71,13 @@ function CodeEditor({ editorRef, codeValue, highlightLine }) {
       if (model) {
         const totalLines = model.getLineCount();
         if (highlightLine <= totalLines) {
-          applyHighlight(editorRef.current);
+          applyHighlight(editorRef.current, !executePressed);
         }
       }
+    } else if (executePressed) {  // delete line highlight when execute press is clicked
+      applyHighlight(editorRef.current, false);
     }
-  }, [highlightLine, editorRef, applyHighlight]);
+  }, [highlightLine, editorRef, applyHighlight, executePressed]);
 
   return (
     <>
@@ -83,7 +85,6 @@ function CodeEditor({ editorRef, codeValue, highlightLine }) {
         flex="1"
         theme="vs-dark"
         defaultLanguage="python"
-        value={codeValue}
         onMount={onMount}
         options={{
           minimap: { enabled: false },

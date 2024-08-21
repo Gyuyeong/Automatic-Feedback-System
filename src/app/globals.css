@@ -17,10 +17,18 @@ body {
   overflow: hidden;
 }
 
+.problem-section {
+  height: calc( 7vh );
+  background-color: #222;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .main-section {
   display: flex;
   flex-direction: row;
-  height: calc( 100vh );
+  height: calc( 93vh );
   background-color: #333;
   padding: 0;
   margin: 0;
@@ -127,7 +135,21 @@ body {
 .result-section {
   display: flex;
   flex-direction: column;
+  max-height: 93vh;
   overflow-y: auto;
+}
+
+.result-section::-webkit-scrollbar {
+  width: 20px;
+}
+
+.result-section::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 10px;
+}
+
+.result-section::-webkit-scrollbar-track {
+  background: #333;
 }
 
 .result-title {
@@ -135,7 +157,7 @@ body {
   justify-content: space-between;
   font-size: large;
   font-weight: bold;
-  color: gray;
+  color: #bbb;
   padding: 10px;
   text-align: left; 
 }

@@ -1,35 +1,17 @@
 import "./globals.css";
 import React from 'react';
 import { ChakraProvider } from "@chakra-ui/react";
-import RunResultSection from "./run-result-section";
+import MainContent from "./main-content";
 import Script from "next/script";
 import { sql } from "@vercel/postgres";
 import { exec } from 'child_process';
 
-// Stores problem guide information
-const GuideContainer = ({ titleText, height, text }) => {
-  const containerStyle = {
-    height: height || 'auto',
-    overflowY: 'scroll'
-  };
-
-  return (
-    <div>
-      <div className="title-text">
-        {titleText}
-      </div>
-      <div style={containerStyle} className="scrollable-container">
-        {text}
-      </div>
-    </div>
-  )
-}
+export const dynamic = 'force-dynamic';  // change cache behavior for select query
 
 export default async function Home() {
-  const longText = "hello";
-  const longText2 = "world";
+  const problemResults = await sql`SELECT * FROM Problems;`;  // query all problems
+  const problems = problemResults.rows;  // problems stored in DB
 
-  let value;
   // Save the code and image to DB
   // this function is called in the client component
   async function handleSaveCode(codeValue, pngData) {
@@ -39,6 +21,7 @@ export default async function Home() {
     }
   }
 
+  // spawns Python graph.py and generate AST
   async function generateASTGraph(codeValue, executedNumberSequence) {
     "use server"
     return new Promise((resolve, reject) => {
@@ -47,6 +30,7 @@ export default async function Home() {
         const { spawn } = require('child_process');
         const pythonProcess = spawn('python', ['./scripts/graph.py']);
   
+        // data to pass to graph.py
         const inputData = {
           code: codeValue,
           executedSequence: executedNumberSequence
@@ -118,6 +102,7 @@ export default async function Home() {
         ...lines
       ];
       const traceCodeValue = traceLines.join('\r\n');
+      // write code to separate files
       await fs.writeFile(turtleCodeFilePath, codeValue);
       await fs.writeFile(turtleCodeTraceFilePath, traceCodeValue);
     } catch (error) {
@@ -146,7 +131,7 @@ export default async function Home() {
             return -1;
           }
   
-          let lines = stdout.split('\r\n');
+          let lines = stdout.split('\r\n');  // executed lines in order using trace
           let executedNumberSequence = [];
           for (let i = 0; i < lines.length; i++) {
             let match = lines[i].match(/turtle_code_trace\.py\(\d+\): (.+)/);
@@ -157,7 +142,9 @@ export default async function Home() {
               executedNumberSequence.push(lineNumber);  // push line numbers in order
             }
           }
+          // need to fix for robustness
           const numImages = executedNumberSequence.length - 6;
+          // need to fix for robustness
           let resultData = await generateASTGraph(codeValue, executedNumberSequence);
           if (resultData !== undefined && resultData !== null) {
             resultData = JSON.parse(resultData);
@@ -177,22 +164,12 @@ export default async function Home() {
     <>
       <ChakraProvider>
         <div className="main">
-          <div className="main-content">
-            <div className="main-section">
-              <div className="guide-section">
-                <div className="guide-title">문제 & 참조 / 제약사항</div>
-                <GuideContainer titleText={'문제 설명'} height={'200px'} text={longText}></GuideContainer>
-                <GuideContainer titleText={'제한 사항'} height={'200px'} text={longText2}></GuideContainer>
-              </div>
-              {/* <div className="gutter"></div> */}
-              <RunResultSection 
-                value={value} 
-                onExecuteSuccess={handleSaveCode} 
-                overwriteEmptySvg={overwriteEmptySvg}
-                getExecutionTrace={getExecutionTrace}
-              ></RunResultSection>
-            </div>
-          </div>
+          <MainContent 
+            problems={problems} 
+            handleSaveCode={handleSaveCode} 
+            overwriteEmptySvg={overwriteEmptySvg} 
+            getExecutionTrace={getExecutionTrace}>
+          </MainContent>
         </div>
       </ChakraProvider>
       <Script src="/skulpt.min.js" type='text/javascript'></Script>
