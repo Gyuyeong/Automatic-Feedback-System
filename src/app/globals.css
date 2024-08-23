@@ -104,7 +104,6 @@ body {
   flex-direction: column;
   width: 50%;
   background-color: #222222;
-  overflow-y: auto;
 }
 
 .highlight-line {
@@ -131,6 +130,13 @@ body {
   display: flex;
   gap: 10px;
 }
+/* 
+@media (max-width: 500px) {
+  .copy-and-save-section .left-buttons
+  .copy-and-save-section .right-buttons {
+    display: none;
+  }
+} */
 
 .result-section {
   display: flex;

@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 
-function CodeEditor({ editorRef, highlightLine, executePressed }) {
+function CodeEditor({ editorRef, editorContent, highlightLine, executePressed }) {
   const decorationsRef = useRef([]);
 
   const applyHighlight = useCallback((monacoEditor, shouldHighlight = true) => {
@@ -47,7 +47,6 @@ function CodeEditor({ editorRef, highlightLine, executePressed }) {
 
   const onMount = (monacoEditor) => {
     editorRef.current = monacoEditor;
-    monacoEditor.focus();
 
     // Apply highlight if the model is already initialized
     const model = monacoEditor.getModel();
@@ -63,6 +62,12 @@ function CodeEditor({ editorRef, highlightLine, executePressed }) {
 
       model.onDidChangeContent(onChange);
     }
+
+    // set the cursor to the end of text
+    const lastLine = model.getLineCount();
+    const lastColumn = model.getLineMaxColumn(lastLine);
+    monacoEditor.setPosition({lineNumber: lastLine, column: lastColumn});
+    monacoEditor.focus();
   };
 
   useEffect(() => {
@@ -82,9 +87,11 @@ function CodeEditor({ editorRef, highlightLine, executePressed }) {
   return (
     <>
       <Editor
+        id='editor'
         flex="1"
         theme="vs-dark"
         defaultLanguage="python"
+        defaultValue={editorContent}
         onMount={onMount}
         options={{
           minimap: { enabled: false },

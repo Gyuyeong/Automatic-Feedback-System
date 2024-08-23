@@ -13,7 +13,6 @@ export default async function Home() {
   const problems = problemResults.rows;  // problems stored in DB
 
   // Save the code and image to DB
-  // this function is called in the client component
   async function handleSaveCode(codeValue, pngData) {
     "use server";  // must add this
     if (codeValue && pngData) {
@@ -64,19 +63,6 @@ export default async function Home() {
     });
   }
 
-  // reset code_ast_1.svg on startup
-  async function overwriteEmptySvg() {
-    "use server";
-    const fs = require('fs').promises;
-    const path = require('path');
-    try {
-      const svgFilePath = path.join(process.cwd(), 'public', 'code_ast_1.svg');
-      await fs.writeFile(svgFilePath, '<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg"></svg>')
-    } catch (error) {
-      console.error("Error overwriting SVG file:", error);
-    }
-  }
-
   // write given code to file
   async function writeTurtleCodeToFile(codeValue) {
     "use server";
@@ -87,9 +73,7 @@ export default async function Home() {
       const turtleCodeTraceFilePath = path.join(process.cwd(), 'scripts', 'turtle_code_trace.py');
 
       let lines = codeValue.trim().split('\r\n');
-      // =========== need to fix for robustness =========== //
       lines.shift();  // remove 'from turtle import *'
-      // =========== need to fix for robustness =========== //
 
       // imports to not spawn the turtle window in the local
       let traceLines = [
@@ -167,7 +151,6 @@ export default async function Home() {
           <MainContent 
             problems={problems} 
             handleSaveCode={handleSaveCode} 
-            overwriteEmptySvg={overwriteEmptySvg} 
             getExecutionTrace={getExecutionTrace}>
           </MainContent>
         </div>

@@ -10,7 +10,7 @@ import {
 import { ChevronDownIcon } from '@chakra-ui/icons';
 
 
-function ProblemSection({ problems, currentProblemIndex, setCurrentProblemIndex }) {
+const ProblemSection = ({ problems, currentProblemIndex, setCurrentProblemIndex }) => {
 //   console.log(problems);
   const handleMenuItemClick = (index) => {
     setCurrentProblemIndex(index);

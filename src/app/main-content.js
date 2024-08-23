@@ -6,10 +6,9 @@ import GuideContainer from "./guide-container";
 import RunResultSection from "./run-result-section";
 
 const MainContent = ({
-    problems,
-    handleSaveCode,
-    overwriteEmptySvg,
-    getExecutionTrace
+    problems,  // problem list
+    handleSaveCode,  // save code function
+    getExecutionTrace  // function to get the ast of the code
 }) => {
   const [currentProblemIndex, setCurrentProblemIndex] = useState(0);
   let problemText = problems[currentProblemIndex]['problem'];
@@ -28,11 +27,10 @@ const MainContent = ({
             <GuideContainer titleText={'문제 설명'} height={'200px'} text={problemText}></GuideContainer>
             <GuideContainer titleText={'제한 사항'} height={'200px'} text={requirementText}></GuideContainer>
           </div>
-          {/* <div className="gutter"></div> */}
           <RunResultSection 
             onExecuteSuccess={handleSaveCode} 
-            overwriteEmptySvg={overwriteEmptySvg}
             getExecutionTrace={getExecutionTrace}
+            problemAnswer={problems[currentProblemIndex]}
           ></RunResultSection>
         </div>
       </div>
