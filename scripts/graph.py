@@ -5,7 +5,7 @@ import base64
 import sys
 import json
 
-global_dict = {}
+global_dict = {}  # save line mappings
 
 
 class GraphHint:
@@ -21,18 +21,13 @@ class GraphHint:
         graph = graphviz.Digraph()
         graph.attr('node')
         return graph
-
-    def __get_graph(self, filepath):
-        with open(filepath + '.svg', 'rb') as imageFile:
-            graph64 = base64.b64encode(imageFile.read()).decode()
-        return graph64
     
 
     def gen_asg(self, tree, ast_path, line_number):
         graph = self.__gen_graph()
         self.ast2graph(tree, graph, line_number)
         graph.render(filename=ast_path, format='svg', cleanup=True)
-        return self.__get_graph(ast_path)
+        # return self.__get_graph(ast_path)
 
     def ast2graph(self, tree, graph, line_number):
         stack = [(None, tree)]  # A stack to keep track of nodes and their parent IDs
@@ -112,6 +107,13 @@ class GraphHint:
                         continue
                     elif child_node.__class__.__name__ == "Expr":
                         for grandchild_node in ast.iter_child_nodes(child_node):
+                            if isinstance(grandchild_node, ast.Call):  # ignore speed
+                                try:
+                                    label = grandchild_node.func.id
+                                except:
+                                    label = grandchild_node.func.attr
+                                if label == "speed":
+                                    continue
                             stack.append((current_id, grandchild_node))
                     elif child_node.__class__.__name__ == "Name":
                         if isinstance(current_node, ast.Call):
@@ -123,6 +125,15 @@ class GraphHint:
                                 stack.append((current_id, child_node))
                         else:
                             stack.append((current_id, child_node))
+                    elif isinstance(child_node, ast.Assign):  # ignore Mock
+                        for grand_child_node in ast.iter_child_nodes(child_node):
+                            if isinstance(grand_child_node, ast.Call):
+                                try: 
+                                    label = grand_child_node.func.id
+                                except:
+                                    label = grand_child_node.func.attr
+                                if label == "Mock":
+                                    continue
                     elif isinstance(current_node, (ast.BinOp, ast.AugAssign)):
                         if not isinstance(child_node, (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow, ast.LShift, ast.RShift, ast.BitOr, ast.BitAnd, ast.BitXor, ast.MatMult)):
                             stack.append((current_id, child_node))
@@ -142,35 +153,40 @@ class GraphHint:
         self.visited_nodes = set()
         self.visited_edges = set()
 
-        if line_number not in global_dict:  # first time processing
-            ast_name = self.file_name + '_ast_' + str(idx + 1)
-            ast_path = os.path.join(self.file_path, ast_name)
+        # if line_number not in global_dict:  # first time processing
+        ast_name = self.file_name + '_ast_' + str(idx + 1)
+        ast_path = os.path.join(self.file_path, ast_name)
 
-            _ = self.gen_asg(tree, ast_path, line_number)
+        # _ = self.gen_asg(tree, ast_path, line_number)
+        self.gen_asg(tree, ast_path, line_number)
 
-            # if line_number not in global_dict:
-            global_dict[line_number] = ast_name + ".svg"
+        # if line_number not in global_dict:
+        global_dict[line_number] = ast_name + ".svg"
 
-        return True
+        return
 
 
 if __name__ == "__main__":
     g = GraphHint(file_path="./public", file_name="code")
     input_data = sys.stdin.read()
     data = json.loads(input_data)
-    code = data.get('code', '')
-    executed_line_numbers = data.get('executedSequence', [])
+    code = data.get('code', '')  # written code
+    executed_line_numbers = data.get('executedSequence', [])  # sequence of executed line numbers
+
+    start_of_running_code_idx = 7  # 7tj idx is where the turtle code starts running
 
     tree = ast.parse(code)  # parse code to AST
-    for idx, line_number in enumerate(executed_line_numbers[6:]):
-        result = g.run(tree=tree, idx=idx, line_number=int(line_number) - 5)
+    for idx, line_number in enumerate(executed_line_numbers[start_of_running_code_idx:]):
+        # if current line number is not in global_dict (first time processing this line)
+        if (int(line_number)) not in global_dict:
+            g.run(tree=tree, idx=idx, line_number=int(line_number))
 
     # subtract 5 to get the original line number
     for i in range(len(executed_line_numbers)):
-        executed_line_numbers[i] = int(executed_line_numbers[i]) - 5
+        executed_line_numbers[i] = int(executed_line_numbers[i])
 
     result_packet = dict()
-    result_packet['executed_line_numbers'] = executed_line_numbers[6:]
+    result_packet['executed_line_numbers'] = executed_line_numbers[start_of_running_code_idx:]
     result_packet['line_number_and_image_mappings'] = global_dict
 
-    print(json.dumps(result_packet))
+    print(json.dumps(result_packet))  # write back to server component

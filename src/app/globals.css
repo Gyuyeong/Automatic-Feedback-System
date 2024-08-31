@@ -121,6 +121,12 @@ body {
   align-items: center;
 }
 
+.speed-section {
+  display:flex;
+  padding: 10px;
+  color: white;
+}
+
 .left-buttons {
   display: flex;
   gap: 20px;
@@ -130,13 +136,6 @@ body {
   display: flex;
   gap: 10px;
 }
-/* 
-@media (max-width: 500px) {
-  .copy-and-save-section .left-buttons
-  .copy-and-save-section .right-buttons {
-    display: none;
-  }
-} */
 
 .result-section {
   display: flex;

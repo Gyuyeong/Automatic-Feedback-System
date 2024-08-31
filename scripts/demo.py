@@ -3,12 +3,18 @@ import base64
 import graphviz
 
 code = """
+from unittest.mock import Mock
+import turtle
 from turtle import *
-def run():
-    fd(100)
-    left(90)
-for i in range(4):
-    run()
+turtle.Screen = Mock()
+turtle.Turtle = Mock()
+screen = turtle.Screen()
+turtle.speed("fastest")
+
+for i in range(500):
+    fd(i)
+    left(5)
+    left(15)
 """
 
 tree = ast.parse(code.strip())
@@ -65,6 +71,13 @@ while stack:
             continue
         elif child_node.__class__.__name__ == "Expr":
             for grandchild_node in ast.iter_child_nodes(child_node):
+                if isinstance(grandchild_node, ast.Call):  # ignore speed
+                    try:
+                        label = grandchild_node.func.id
+                    except:
+                        label = grandchild_node.func.attr
+                    if label == "speed":
+                        continue
                 stack.append((current_id, grandchild_node))
         elif child_node.__class__.__name__ == "Name":
             if isinstance(current_node, ast.Call):
@@ -76,6 +89,15 @@ while stack:
                     stack.append((current_id, child_node))
             else:
                 stack.append((current_id, child_node))
+        elif isinstance(child_node, ast.Assign):  # ignore Mock
+            for grand_child_node in ast.iter_child_nodes(child_node):
+                if isinstance(grand_child_node, ast.Call):
+                    try: 
+                        label = grand_child_node.func.id
+                    except:
+                        label = grand_child_node.func.attr
+                    if label == "Mock":
+                        continue
         elif isinstance(current_node, ast.UnaryOp):
             if not isinstance(child_node, (ast.UAdd, ast.USub, ast.Not, ast.Invert)):
                 stack.append((current_id, child_node))
@@ -86,7 +108,7 @@ while stack:
             if not isinstance(child_node, (ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Is, ast.IsNot, ast.In, ast.NotIn)):
                 stack.append((current_id, child_node))
         # elif isinstance(current_node, ast.Tuple):
-        #     continue       
+        #     continue      
         else:
             stack.append((current_id, child_node))
 

@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 
-function CodeEditor({ editorRef, editorContent, highlightLine, executePressed }) {
+const CodeEditor = ({ editorRef, editorContent, highlightLine, executePressed }) => {
   const decorationsRef = useRef([]);
 
   const applyHighlight = useCallback((monacoEditor, shouldHighlight = true) => {
@@ -66,43 +66,37 @@ function CodeEditor({ editorRef, editorContent, highlightLine, executePressed })
     // set the cursor to the end of text
     const lastLine = model.getLineCount();
     const lastColumn = model.getLineMaxColumn(lastLine);
-    monacoEditor.setPosition({lineNumber: lastLine, column: lastColumn});
+    monacoEditor.setPosition({ lineNumber: lastLine, column: lastColumn });
     monacoEditor.focus();
   };
 
   useEffect(() => {
-    if (editorRef.current && highlightLine > 0) {
-      const model = editorRef.current.getModel();
-      if (model) {
-        const totalLines = model.getLineCount();
-        if (highlightLine <= totalLines) {
-          applyHighlight(editorRef.current, !executePressed);
-        }
+    if (editorRef.current) {
+      if (highlightLine > 0) {
+        applyHighlight(editorRef.current, !executePressed);
+      } else if (executePressed) {
+        applyHighlight(editorRef.current, false);
       }
-    } else if (executePressed) {  // delete line highlight when execute press is clicked
-      applyHighlight(editorRef.current, false);
     }
-  }, [highlightLine, editorRef, applyHighlight, executePressed]);
+  }, [highlightLine, applyHighlight, executePressed]);
 
   return (
-    <>
-      <Editor
-        id='editor'
-        flex="1"
-        theme="vs-dark"
-        defaultLanguage="python"
-        defaultValue={editorContent}
-        onMount={onMount}
-        options={{
-          minimap: { enabled: false },
-          scrollbar: {
-            vertical: 'auto',
-            horizontal: 'auto'
-          }
-        }}
-      />
-    </>
+    <Editor
+      id='editor'
+      flex="1"
+      theme="vs-dark"
+      defaultLanguage="python"
+      defaultValue={editorContent}
+      onMount={onMount}
+      options={{
+        minimap: { enabled: false },
+        scrollbar: {
+          vertical: 'auto',
+          horizontal: 'auto',
+        },
+      }}
+    />
   );
-}
+};
 
 export default CodeEditor;

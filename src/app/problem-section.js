@@ -10,10 +10,13 @@ import {
 import { ChevronDownIcon } from '@chakra-ui/icons';
 
 
-const ProblemSection = ({ problems, currentProblemIndex, setCurrentProblemIndex }) => {
-//   console.log(problems);
+const ProblemSection = ({ 
+  problems, 
+  currentProblemIndex,
+}) => {
+
   const handleMenuItemClick = (index) => {
-    setCurrentProblemIndex(index);
+    window.location.href = `/?problemIndex=${index}`;  // reload the page with chosen problem index
   };
 
   return (

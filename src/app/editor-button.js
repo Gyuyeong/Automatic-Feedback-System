@@ -30,11 +30,13 @@ const EditorButton = ({
   setCompareText,
   activeEditor, 
   setActiveEditor, 
-  setEditorContent }) => {
+  setEditorContent, 
+  checkedItem 
+}) => {
   
   const processCode = async () => {
     if (activeEditor === 'editor') {  // editor
-      const codeValue = editorRef.current.getValue();
+      let codeValue = editorRef.current.getValue();
   
       if (codeValue.length > 0) {
         
@@ -48,8 +50,21 @@ const EditorButton = ({
           // set execute pressed to true
           setExecutePressed(true);
           // hide execution trace
-          setNumImages(0);  // set num Images to 0
+          setNumImages(0);  // set num Images to 0 (this erases the analysis)
           setExecutedLineNumbers([]);  // delete all executed line number trace
+
+          let codeLines = codeValue.trim().split('\r\n');
+          // set the speed of the animation
+          let speedCode;
+          if (checkedItem === 'slow') {
+            speedCode = "turtle.speed(1)";
+          } else if (checkedItem === 'normal') {
+            speedCode = "turtle.speed(4)"
+          } else if (checkedItem === 'fast') {
+            speedCode = "turtle.speed(0)"  // 0 is fastest
+          }
+          codeLines.splice(1, 0, 'import turtle', speedCode);  // add import turtle and speed code
+          codeValue = codeLines.join('\r\n');
             
           // execute Python code with Skulpt
           Sk.configure({
@@ -84,7 +99,7 @@ const EditorButton = ({
           try {
             setExecutePressed(false);
             let resultData = await getExecutionTrace(codeValue);
-            let executed_line_numbers = resultData['executed_line_numbers'];
+            let executed_line_numbers = resultData['executed_line_numbers'];  // sequence of executed line numbers
             let line_number_and_image_mappings = resultData['line_number_and_image_mappings'];
             let numImages = resultData['num_images'];
             if (numImages > 0) setNumImages(numImages);

@@ -5,9 +5,9 @@ import EditorButton from "./editor-button";
 import CodeEditor from "./code-editor";
 import CodeDiffEditor from "./code-diff-editor";
 import { useState, useRef } from 'react';
-import { Button } from '@chakra-ui/react';
+import { Button, Stack } from '@chakra-ui/react';
 import { Box } from "@chakra-ui/react";
-import { Flex, Spacer } from '@chakra-ui/react';
+import { Flex, Spacer, Center, Spinner } from '@chakra-ui/react';
 import {
   Accordion,
   AccordionItem,
@@ -15,6 +15,7 @@ import {
   AccordionPanel,
   AccordionIcon,
 } from '@chakra-ui/react';
+import { Checkbox, CheckboxGroup } from "@chakra-ui/react";
 import { Text } from "@chakra-ui/react";
 
 // utility buttons
@@ -75,14 +76,15 @@ const ResultAccordion = ({
   executedLineNumbers, 
   lineAndImageMapping, 
   currentIndex, 
-  setCurrentIndex }) => {
+  setCurrentIndex 
+}) => {
   const [svgSrcs, setSvgSrcs] = useState(['/code_ast.svg']);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const fetchSvgFiles = async () => {
+  const fetchSvgFiles = async (linesToFetch) => {
     const svgFiles = [];
-    for (let i = 0; i < executedLineNumbers.length; i++) {
+    for (let lineNumber of linesToFetch) {
       try {
-        let lineNumber = executedLineNumbers[i];
         let filename = lineAndImageMapping[lineNumber];
         const response = await fetch(filename);
         if (response.ok) {
@@ -95,7 +97,19 @@ const ResultAccordion = ({
         console.error(`Error fetching SVG file`, error);
       }
     }
-    setSvgSrcs(svgFiles);
+    return svgFiles;
+  };
+
+  const fetchImagesInBatches = async () => {
+    const batchSize = 50; // Adjust the batch size based on performance
+    let allSvgFiles = [];
+    for (let i = 0; i < executedLineNumbers.length; i += batchSize) {
+      const linesToFetch = executedLineNumbers.slice(i, i + batchSize);
+      const svgFiles = await fetchSvgFiles(linesToFetch);
+      allSvgFiles = [...allSvgFiles, ...svgFiles];
+      setSvgSrcs(allSvgFiles); // Update state progressively
+    }
+    setIsLoading(false);
   };
 
   const handleNextImage = () => {
@@ -104,13 +118,14 @@ const ResultAccordion = ({
 
   const handlePrevImage = () => {
     setCurrentIndex((prevIndex) => (prevIndex - 1 + svgSrcs.length) % svgSrcs.length);
-  }
+  };
 
   useEffect(() => {
-    const intervalId = setInterval(fetchSvgFiles, 500);
-    setCurrentIndex(0);  // reset to the first image
-    return () => clearInterval(intervalId);
-  }, [numImages])
+    setIsLoading(true);
+    setSvgSrcs(['/code_ast.svg']); // Reset to default image while loading
+    setCurrentIndex(0); // reset to the first image
+    fetchImagesInBatches(); // Start fetching images in batches
+  }, [numImages]);
 
   return (
     <Accordion allowToggle bg="#111" border="none">
@@ -124,40 +139,62 @@ const ResultAccordion = ({
           </AccordionButton>
         </h2>
         <AccordionPanel bg="#fff" margin='10px'>
-          {svgSrcs.length > 1 && (
-            <Flex justifyContent="center" alignItems="center">
-              <Button onClick={handlePrevImage}>&lt;</Button>
-              <Spacer/>
-              <Text>{`${currentIndex + 1}/${svgSrcs.length}`}</Text>
-              <Spacer/>
-              <Button onClick={handleNextImage}>&gt;</Button>
-            </Flex>
+          {isLoading ? (
+            <Center height="200px">
+              <Flex direction="column" alignItems="center">
+                <Spinner size="xl" color="blue.500" />
+                <Text fontSize="xl" color="gray.600" mt="4" fontWeight="semibold">
+                  Analyzing...
+                </Text>
+              </Flex>
+            </Center>
+          ) : (
+            <>
+              {svgSrcs.length > 1 && (
+                <Flex justifyContent="center" alignItems="center">
+                  <Button onClick={handlePrevImage}>&lt;</Button>
+                  <Spacer/>
+                  <Text>{`${currentIndex + 1}/${svgSrcs.length}`}</Text>
+                  <Spacer/>
+                  <Button onClick={handleNextImage}>&gt;</Button>
+                </Flex>
+              )}
+              <pre id={pre_id}>
+                <img src={svgSrcs[currentIndex]} alt="SVG Preview" />
+              </pre>
+            </>
           )}
-          <pre id={pre_id}>
-            <img src={svgSrcs[currentIndex]}></img>
-          </pre>
         </AccordionPanel>
       </AccordionItem>
     </Accordion>
-  )
-}
+  );
+};
 
 const RunResultSection = ({ 
   onExecuteSuccess, 
   getExecutionTrace, 
-  problemAnswer }) => {
+  problemAnswer,
+  numImages,
+  setNumImages,
+  executedLineNumbers, 
+  setExecutedLineNumbers,
+  lineAndImageMapping,
+  setLineAndImageMapping,
+}) => {
   const initialRunSectionWidth = 70;
-  const editorRef = useRef(null);  // code editor ref
-  const [numImages, setNumImages] = useState(0);  // number of images to show for result
-  const [runSectionWidth, setRunSectionWidth] = useState(initialRunSectionWidth);  // for gutter
-  const [executedLineNumbers, setExecutedLineNumbers] = useState([]);  // executed line numbers
-  const [lineAndImageMapping, setLineAndImageMapping] = useState({});  // line number and image url mapping
-  const [currentIndex, setCurrentIndex] = useState(0);  // index of shown result image
   const isDragging = useRef(false);
+  const editorRef = useRef(null);  // code editor ref
+  const [runSectionWidth, setRunSectionWidth] = useState(initialRunSectionWidth);  // for gutter
+  const [currentIndex, setCurrentIndex] = useState(0);  // index of shown result image
   const [executePressed, setExecutePressed] = useState(false);  // keep track of whether 실행 is pressed
   const [activeEditor, setActiveEditor] = useState('editor');  // keep track of which editor is active at the moment
   const [editorContent, setEditorContent] = useState('from turtle import *\r\n');  // keep track of the editor contents
   const [compareText, setCompareText] = useState('비교');  // '비교' and 'Back'
+  const [checkedItem, setCheckedItem] = useState('normal');  // check which speed is clicked
+
+  const handleCheckChange = (value) => {
+    setCheckedItem(value);
+  };
 
   // handle sliding gutter
   const handleMouseDown = (e) => {
@@ -192,85 +229,99 @@ const RunResultSection = ({
   return (
     <div className="container" style={{ display: 'flex', width: '100%', height: '100vh' }}>
       <div className="run-section" style={{ width: `${runSectionWidth}%` }}>
-        <div className='copy-and-save-section'>
-          {shouldShowButtons() && (
-            <>
-              <div className="left-buttons">
-                <UtilityButton
-                  editorRef={editorRef}
-                  text={'Copy'}
-                  url={'copy_icon.svg'}
-                >
-                </UtilityButton>
-                <UtilityButton
-                  editorRef={editorRef}
-                  text={'Undo'}
-                  url={'undo_icon.svg'}
-                >
-                </UtilityButton>
-                <UtilityButton
-                  editorRef={editorRef}
-                  text={'Save'}
-                  url={'save_icon.svg'}
-                >
-                </UtilityButton>
-              </div>
-              <div className="right-buttons">
-                {shouldShowExecuteAndAnalyzeButtons() && (
-                  <>
-                    <EditorButton 
-                      text={'실행'} 
-                      editorRef={editorRef} 
-                      onExecute={onExecuteSuccess}
-                      getExecutionTrace={null}
-                      setNumImages={setNumImages}
-                      setExecutedLineNumbers={setExecutedLineNumbers}
-                      setLineAndImageMapping={null}
-                      setExecutePressed={setExecutePressed}
-                      setCompareText={setCompareText}
-                      activeEditor={activeEditor}
-                      setActiveEditor={setActiveEditor}
-                      setEditorContent={setEditorContent}
-                    />
-                    <EditorButton
-                      text={'분석'}
-                      editorRef={editorRef}
-                      onExecute={onExecuteSuccess}
-                      getExecutionTrace={getExecutionTrace}
-                      setNumImages={setNumImages}
-                      setExecutedLineNumbers={setExecutedLineNumbers}
-                      setLineAndImageMapping={setLineAndImageMapping}
-                      setExecutePressed={setExecutePressed}
-                      setCompareText={setCompareText}
-                      activeEditor={activeEditor}
-                      setActiveEditor={setActiveEditor}
-                      setEditorContent={setEditorContent}
-                    />
-                  </>
-                )}
-                <EditorButton
-                  text={compareText}
-                  editorRef={editorRef}
-                  onExecute={null}
-                  getExecutionTrace={null}
-                  setNumImages={null}
-                  setExecutedLineNumbers={null}
-                  setLineAndImageMapping={null}
-                  setExecutePressed={null}
-                  setCompareText={setCompareText}
-                  activeEditor={activeEditor}
-                  setActiveEditor={setActiveEditor}
-                  setEditorContent={setEditorContent}
-                />
-              </div>
-            </>
-          )}
+        <div className="utility-section">
+          <div className='copy-and-save-section'>
+            {shouldShowButtons() && (
+              <>
+                <div className="left-buttons">
+                  <UtilityButton
+                    editorRef={editorRef}
+                    text={'Copy'}
+                    url={'copy_icon.svg'}
+                  >
+                  </UtilityButton>
+                  <UtilityButton
+                    editorRef={editorRef}
+                    text={'Undo'}
+                    url={'undo_icon.svg'}
+                  >
+                  </UtilityButton>
+                  <UtilityButton
+                    editorRef={editorRef}
+                    text={'Save'}
+                    url={'save_icon.svg'}
+                  >
+                  </UtilityButton>
+                </div>
+                <div className="right-buttons">
+                  {shouldShowExecuteAndAnalyzeButtons() && (
+                    <>
+                      <EditorButton 
+                        text={'실행'} 
+                        editorRef={editorRef} 
+                        onExecute={onExecuteSuccess}
+                        getExecutionTrace={null}
+                        setNumImages={setNumImages}
+                        setExecutedLineNumbers={setExecutedLineNumbers}
+                        setLineAndImageMapping={null}
+                        setExecutePressed={setExecutePressed}
+                        setCompareText={setCompareText}
+                        activeEditor={activeEditor}
+                        setActiveEditor={setActiveEditor}
+                        setEditorContent={setEditorContent}
+                        checkedItem={checkedItem}
+                      />
+                      <EditorButton
+                        text={'분석'}
+                        editorRef={editorRef}
+                        onExecute={onExecuteSuccess}
+                        getExecutionTrace={getExecutionTrace}
+                        setNumImages={setNumImages}
+                        setExecutedLineNumbers={setExecutedLineNumbers}
+                        setLineAndImageMapping={setLineAndImageMapping}
+                        setExecutePressed={setExecutePressed}
+                        setCompareText={setCompareText}
+                        activeEditor={activeEditor}
+                        setActiveEditor={setActiveEditor}
+                        setEditorContent={setEditorContent}
+                        checkedItem={checkedItem}
+                      />
+                    </>
+                  )}
+                  <EditorButton
+                    text={compareText}
+                    editorRef={editorRef}
+                    onExecute={null}
+                    getExecutionTrace={null}
+                    setNumImages={null}
+                    setExecutedLineNumbers={null}
+                    setLineAndImageMapping={null}
+                    setExecutePressed={null}
+                    setCompareText={setCompareText}
+                    activeEditor={activeEditor}
+                    setActiveEditor={setActiveEditor}
+                    setEditorContent={setEditorContent}
+                    checkedItem={checkedItem}
+                  />
+                </div>
+              </>
+            )}
+          </div>
+          <div className="speed-section">
+            <CheckboxGroup colorScheme='blue'>
+              <Stack direction={['column', 'row']}>
+                <Checkbox isChecked={checkedItem === 'slow'} onChange={() => handleCheckChange('slow')}>Slow</Checkbox>
+                <Checkbox isChecked={checkedItem === 'normal'} onChange={() => handleCheckChange('normal')}>Normal</Checkbox>
+                <Checkbox isChecked={checkedItem === 'fast'} onChange={() => handleCheckChange('fast')}>Fast</Checkbox>
+              </Stack>
+            </CheckboxGroup>
+          </div>
         </div>
         {activeEditor === 'editor' && (
           <CodeEditor 
             editorRef={editorRef} 
             editorContent={editorContent} 
-            highlightLine={executedLineNumbers[currentIndex]} 
+            highlightLine={executedLineNumbers[currentIndex] - 6}
             executePressed={executePressed}
           />
         )}

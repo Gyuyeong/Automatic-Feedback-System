@@ -8,7 +8,11 @@ import { exec } from 'child_process';
 
 export const dynamic = 'force-dynamic';  // change cache behavior for select query
 
-export default async function Home() {
+export default async function Home({ searchParams }) {
+  // get problem index
+  const problemIndex = searchParams['problemIndex'];
+  const initialProblemIndex = problemIndex ? parseInt(problemIndex, 10) : 0;
+
   const problemResults = await sql`SELECT * FROM Problems;`;  // query all problems
   const problems = problemResults.rows;  // problems stored in DB
 
@@ -23,6 +27,7 @@ export default async function Home() {
   // spawns Python graph.py and generate AST
   async function generateASTGraph(codeValue, executedNumberSequence) {
     "use server"
+    // code value contains Mock()
     return new Promise((resolve, reject) => {
       let resultData = '';
       if (codeValue) {
@@ -31,8 +36,8 @@ export default async function Home() {
   
         // data to pass to graph.py
         const inputData = {
-          code: codeValue,
-          executedSequence: executedNumberSequence
+          code: codeValue,  // code without
+          executedSequence: executedNumberSequence  // line number sequence
         };
   
         const jsonString = JSON.stringify(inputData);
@@ -69,8 +74,8 @@ export default async function Home() {
     const fs = require('fs').promises;
     const path = require('path');
     try {
-      const turtleCodeFilePath = path.join(process.cwd(), 'scripts', 'turtle_code.py');
-      const turtleCodeTraceFilePath = path.join(process.cwd(), 'scripts', 'turtle_code_trace.py');
+      const turtleCodeFilePath = path.join(process.cwd(), 'scripts', 'turtle_code.py');  // original code
+      const turtleCodeTraceFilePath = path.join(process.cwd(), 'scripts', 'turtle_code_trace.py');  // code with Mock module
 
       let lines = codeValue.trim().split('\r\n');
       lines.shift();  // remove 'from turtle import *'
@@ -83,14 +88,18 @@ export default async function Home() {
         'turtle.Screen = Mock()',
         'turtle.Turtle = Mock()',
         'screen = turtle.Screen()',
+        'turtle.speed("fastest")',
         ...lines
       ];
       const traceCodeValue = traceLines.join('\r\n');
       // write code to separate files
       await fs.writeFile(turtleCodeFilePath, codeValue);
       await fs.writeFile(turtleCodeTraceFilePath, traceCodeValue);
+
+      return traceCodeValue;
     } catch (error) {
       console.error("Error writing code:", error);
+      return null;
     }
   }
 
@@ -98,12 +107,12 @@ export default async function Home() {
   async function getExecutionTrace(codeValue) {
     "use server";
     if (codeValue) {
-      writeTurtleCodeToFile(codeValue);  // write turtle code to file
+      const traceCodeValue = await writeTurtleCodeToFile(codeValue);  // write user written code to file
       const commandWindows = 'python -m trace -t ./scripts/turtle_code_trace.py | findstr "turtle_code_trace.py"';  // Windows
       const commandLinux = 'python -m trace -t ./scripts/turtle_code_trace.py | grep turtle_code_trace.py';  // linux
 
       return new Promise((resolve, reject) => {
-        exec(commandWindows, async (error, stdout, stderr) => {
+        exec(commandWindows, async (error, stdout, stderr) => {  // execute trace
           if (error) {
             console.error(`exec error: ${error}`);
             reject(-1);
@@ -116,7 +125,8 @@ export default async function Home() {
           }
   
           let lines = stdout.split('\r\n');  // executed lines in order using trace
-          let executedNumberSequence = [];
+          // save executed line number sequence
+          let executedNumberSequence = [];  // code with Mock
           for (let i = 0; i < lines.length; i++) {
             let match = lines[i].match(/turtle_code_trace\.py\(\d+\): (.+)/);
             let matchNum = lines[i].match(/turtle_code_trace\.py\((\d+)\)/);
@@ -126,13 +136,14 @@ export default async function Home() {
               executedNumberSequence.push(lineNumber);  // push line numbers in order
             }
           }
-          // need to fix for robustness
-          const numImages = executedNumberSequence.length - 6;
-          // need to fix for robustness
-          let resultData = await generateASTGraph(codeValue, executedNumberSequence);
+
+          const numImages = executedNumberSequence.length - 7;
+
+          let resultData = await generateASTGraph(traceCodeValue, executedNumberSequence);
           if (resultData !== undefined && resultData !== null) {
             resultData = JSON.parse(resultData);
             resultData['num_images'] = numImages;
+            // console.log(resultData);
             resolve(resultData);
           }
           // need to handle error cases
@@ -151,7 +162,9 @@ export default async function Home() {
           <MainContent 
             problems={problems} 
             handleSaveCode={handleSaveCode} 
-            getExecutionTrace={getExecutionTrace}>
+            getExecutionTrace={getExecutionTrace}
+            problemIndex={initialProblemIndex}
+          >
           </MainContent>
         </div>
       </ChakraProvider>
