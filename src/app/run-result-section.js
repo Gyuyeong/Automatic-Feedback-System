@@ -76,10 +76,12 @@ const ResultAccordion = ({
   executedLineNumbers, 
   lineAndImageMapping, 
   currentIndex, 
-  setCurrentIndex 
+  setCurrentIndex, 
+  isLoading, 
+  setIsLoading 
 }) => {
   const [svgSrcs, setSvgSrcs] = useState(['/code_ast.svg']);
-  const [isLoading, setIsLoading] = useState(false);
+  // const [isLoading, setIsLoading] = useState(false);
 
   const fetchSvgFiles = async (linesToFetch) => {
     const svgFiles = [];
@@ -191,6 +193,7 @@ const RunResultSection = ({
   const [editorContent, setEditorContent] = useState('from turtle import *\r\n');  // keep track of the editor contents
   const [compareText, setCompareText] = useState('비교');  // '비교' and 'Back'
   const [checkedItem, setCheckedItem] = useState('normal');  // check which speed is clicked
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleCheckChange = (value) => {
     setCheckedItem(value);
@@ -264,12 +267,14 @@ const RunResultSection = ({
                         setNumImages={setNumImages}
                         setExecutedLineNumbers={setExecutedLineNumbers}
                         setLineAndImageMapping={null}
+                        executePressed={executePressed}
                         setExecutePressed={setExecutePressed}
                         setCompareText={setCompareText}
                         activeEditor={activeEditor}
                         setActiveEditor={setActiveEditor}
                         setEditorContent={setEditorContent}
                         checkedItem={checkedItem}
+                        setIsLoading={setIsLoading}
                       />
                       <EditorButton
                         text={'분석'}
@@ -279,12 +284,14 @@ const RunResultSection = ({
                         setNumImages={setNumImages}
                         setExecutedLineNumbers={setExecutedLineNumbers}
                         setLineAndImageMapping={setLineAndImageMapping}
+                        executePressed={executePressed}
                         setExecutePressed={setExecutePressed}
                         setCompareText={setCompareText}
                         activeEditor={activeEditor}
                         setActiveEditor={setActiveEditor}
                         setEditorContent={setEditorContent}
                         checkedItem={checkedItem}
+                        setIsLoading={setIsLoading}
                       />
                     </>
                   )}
@@ -296,25 +303,31 @@ const RunResultSection = ({
                     setNumImages={null}
                     setExecutedLineNumbers={null}
                     setLineAndImageMapping={null}
+                    executePressed={executePressed}
                     setExecutePressed={null}
                     setCompareText={setCompareText}
                     activeEditor={activeEditor}
                     setActiveEditor={setActiveEditor}
                     setEditorContent={setEditorContent}
                     checkedItem={checkedItem}
+                    setIsLoading={setIsLoading}
                   />
                 </div>
               </>
             )}
           </div>
           <div className="speed-section">
-            <CheckboxGroup colorScheme='blue'>
-              <Stack direction={['column', 'row']}>
-                <Checkbox isChecked={checkedItem === 'slow'} onChange={() => handleCheckChange('slow')}>Slow</Checkbox>
-                <Checkbox isChecked={checkedItem === 'normal'} onChange={() => handleCheckChange('normal')}>Normal</Checkbox>
-                <Checkbox isChecked={checkedItem === 'fast'} onChange={() => handleCheckChange('fast')}>Fast</Checkbox>
-              </Stack>
-            </CheckboxGroup>
+            {shouldShowButtons() && (
+              <>
+                <CheckboxGroup colorScheme='blue'>
+                  <Stack direction={['column', 'row']}>
+                    <Checkbox isChecked={checkedItem === 'slow'} onChange={() => handleCheckChange('slow')}>Slow</Checkbox>
+                    <Checkbox isChecked={checkedItem === 'normal'} onChange={() => handleCheckChange('normal')}>Normal</Checkbox>
+                    <Checkbox isChecked={checkedItem === 'fast'} onChange={() => handleCheckChange('fast')}>Fast</Checkbox>
+                  </Stack>
+                </CheckboxGroup>
+              </>
+            )}
           </div>
         </div>
         {activeEditor === 'editor' && (
@@ -348,6 +361,8 @@ const RunResultSection = ({
             lineAndImageMapping={lineAndImageMapping}
             currentIndex={currentIndex}
             setCurrentIndex={setCurrentIndex}
+            isLoading={isLoading}
+            setIsLoading={setIsLoading}
           />
         </div>
       </div>

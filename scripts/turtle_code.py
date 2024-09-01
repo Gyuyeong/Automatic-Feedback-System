@@ -1,5 +1,5 @@
 from turtle import *
 
-for i in range(4):
+for i in range(500):
     fd(100)
-    left(144)
+    left(91)

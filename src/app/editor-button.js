@@ -25,13 +25,15 @@ const EditorButton = ({
   getExecutionTrace, 
   setNumImages, 
   setExecutedLineNumbers, 
-  setLineAndImageMapping, 
+  setLineAndImageMapping,
+  executePressed, 
   setExecutePressed,
   setCompareText,
   activeEditor, 
   setActiveEditor, 
   setEditorContent, 
-  checkedItem 
+  checkedItem, 
+  setIsLoading 
 }) => {
   
   const processCode = async () => {
@@ -52,6 +54,7 @@ const EditorButton = ({
           // hide execution trace
           setNumImages(0);  // set num Images to 0 (this erases the analysis)
           setExecutedLineNumbers([]);  // delete all executed line number trace
+          setIsLoading(false);
 
           let codeLines = codeValue.trim().split('\r\n');
           // set the speed of the animation
@@ -97,6 +100,7 @@ const EditorButton = ({
           );
         } else if (text == "분석") {
           try {
+            setIsLoading(true);
             setExecutePressed(false);
             let resultData = await getExecutionTrace(codeValue);
             let executed_line_numbers = resultData['executed_line_numbers'];  // sequence of executed line numbers
@@ -112,6 +116,7 @@ const EditorButton = ({
             console.log("Error getting execution trace result:", error);
           }
         } else if (text === "비교") {
+          setIsLoading(false);
           if (codeValue.length > 0) {
             setCompareText('Back');
             setEditorContent(editorRef.current.getValue());
@@ -121,6 +126,7 @@ const EditorButton = ({
       }
     } else {  // diff editor
       if (text === "Back") {
+        setIsLoading(false);
         setCompareText('비교');
         setActiveEditor('editor');
       }
@@ -132,6 +138,7 @@ const EditorButton = ({
       size="sm" 
       colorScheme="messenger" 
       onClick={processCode}
+      isDisabled={(text === "분석") && (!executePressed)}  // analyze can only be pressed after execution of turtle
     >
       {text}
     </Button>
