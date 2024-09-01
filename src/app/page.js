@@ -33,28 +33,28 @@ export default async function Home({ searchParams }) {
       if (codeValue) {
         const { spawn } = require('child_process');
         const pythonProcess = spawn('python', ['./scripts/graph.py']);
-  
+
         // data to pass to graph.py
         const inputData = {
           code: codeValue,  // code without
           executedSequence: executedNumberSequence  // line number sequence
         };
-  
+
         const jsonString = JSON.stringify(inputData);
-  
+
         pythonProcess.stdin.write(jsonString);
         pythonProcess.stdin.end();
-  
+
         pythonProcess.stdout.on('data', (data) => {
           resultData += data.toString();
           resolve(resultData);
         });
-  
+
         pythonProcess.stderr.on('data', (data) => {
           console.error(data.toString());
           reject(data.toString());
         });
-  
+
         pythonProcess.on('exit', (code) => {
           if (code === 0) {
             resolve(resultData);
@@ -123,14 +123,14 @@ export default async function Home({ searchParams }) {
             reject(-1);
             return -1;
           }
-  
+
           let lines = stdout.split('\r\n');  // executed lines in order using trace
           // save executed line number sequence
           let executedNumberSequence = [];  // code with Mock
           for (let i = 0; i < lines.length; i++) {
             let match = lines[i].match(/turtle_code_trace\.py\(\d+\): (.+)/);
             let matchNum = lines[i].match(/turtle_code_trace\.py\((\d+)\)/);
-  
+
             if (match && matchNum) {
               let lineNumber = matchNum[1];
               executedNumberSequence.push(lineNumber);  // push line numbers in order
@@ -159,9 +159,9 @@ export default async function Home({ searchParams }) {
     <>
       <ChakraProvider>
         <div className="main">
-          <MainContent 
-            problems={problems} 
-            handleSaveCode={handleSaveCode} 
+          <MainContent
+            problems={problems}
+            handleSaveCode={handleSaveCode}
             getExecutionTrace={getExecutionTrace}
             problemIndex={initialProblemIndex}
           >

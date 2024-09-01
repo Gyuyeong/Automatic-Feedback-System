@@ -6,6 +6,7 @@ import Editor from '@monaco-editor/react';
 const CodeEditor = ({ editorRef, editorContent, highlightLine, executePressed }) => {
   const decorationsRef = useRef([]);
 
+  // line highlight
   const applyHighlight = useCallback((monacoEditor, shouldHighlight = true) => {
     const monaco = window.monaco;
     const model = monacoEditor.getModel();

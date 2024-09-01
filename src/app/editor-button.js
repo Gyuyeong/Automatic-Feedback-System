@@ -7,7 +7,7 @@ function outf(text) {
   var mypre = document.getElementById("output");
   mypre.innerHTML = mypre.innerHTML + text;
 }
-  
+
 // function used in Skulpt
 function builtinRead(x) {
   if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined) {
@@ -18,30 +18,30 @@ function builtinRead(x) {
 
 
 // button for executing code and generating ast
-const EditorButton = ({ 
-  text, 
-  editorRef, 
-  onExecute, 
-  getExecutionTrace, 
-  setNumImages, 
-  setExecutedLineNumbers, 
+const EditorButton = ({
+  text,
+  editorRef,
+  onExecute,
+  getExecutionTrace,
+  setNumImages,
+  setExecutedLineNumbers,
   setLineAndImageMapping,
-  executePressed, 
+  executePressed,
   setExecutePressed,
   setCompareText,
-  activeEditor, 
-  setActiveEditor, 
-  setEditorContent, 
-  checkedItem, 
-  setIsLoading 
+  activeEditor,
+  setActiveEditor,
+  setEditorContent,
+  checkedItem,
+  setIsLoading
 }) => {
-  
+
   const processCode = async () => {
     if (activeEditor === 'editor') {  // editor
       let codeValue = editorRef.current.getValue();
-  
+
       if (codeValue.length > 0) {
-        
+
         // check if the first line is "from turtle import *"
         const firstLine = codeValue.trim().split('\r\n')[0];
         if (firstLine !== "from turtle import *") {
@@ -68,7 +68,7 @@ const EditorButton = ({
           }
           codeLines.splice(1, 0, 'import turtle', speedCode);  // add import turtle and speed code
           codeValue = codeLines.join('\r\n');
-            
+
           // execute Python code with Skulpt
           Sk.configure({
             __future__: Sk.python3  // Python 3
@@ -89,7 +89,7 @@ const EditorButton = ({
             try {
               imageDataURL = canvas.toDataURL('image/png');
             } catch (error) {
-              imageDataURL = null; 
+              imageDataURL = null;
             }
             if (imageDataURL !== null && imageDataURL !== undefined) onExecute(codeValue, imageDataURL);  // save code to DB
           },
@@ -132,11 +132,11 @@ const EditorButton = ({
       }
     }
   }
-  
+
   return (
-    <Button 
-      size="sm" 
-      colorScheme="messenger" 
+    <Button
+      size="sm"
+      colorScheme="messenger"
       onClick={processCode}
       isDisabled={(text === "분석") && (!executePressed)}  // analyze can only be pressed after execution of turtle
     >

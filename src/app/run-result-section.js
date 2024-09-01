@@ -38,9 +38,9 @@ const UtilityButton = ({ editorRef, text, url }) => {
     backgroundColor: 'inherit',
   };
 
-  return <Button size='sm' 
-    className='copy-button' 
-    onClick={processCode} 
+  return <Button size='sm'
+    className='copy-button'
+    onClick={processCode}
     style={buttonStyle}>
   </Button>
 }
@@ -69,16 +69,16 @@ const TurtleAccordion = ({ title }) => {
 }
 
 // Store and show ast result
-const ResultAccordion = ({ 
-  title, 
-  pre_id, 
-  numImages, 
-  executedLineNumbers, 
-  lineAndImageMapping, 
-  currentIndex, 
-  setCurrentIndex, 
-  isLoading, 
-  setIsLoading 
+const ResultAccordion = ({
+  title,
+  pre_id,
+  numImages,
+  executedLineNumbers,
+  lineAndImageMapping,
+  currentIndex,
+  setCurrentIndex,
+  isLoading,
+  setIsLoading
 }) => {
   const [svgSrcs, setSvgSrcs] = useState(['/code_ast.svg']);
   // const [isLoading, setIsLoading] = useState(false);
@@ -155,9 +155,9 @@ const ResultAccordion = ({
               {svgSrcs.length > 1 && (
                 <Flex justifyContent="center" alignItems="center">
                   <Button onClick={handlePrevImage}>&lt;</Button>
-                  <Spacer/>
+                  <Spacer />
                   <Text>{`${currentIndex + 1}/${svgSrcs.length}`}</Text>
-                  <Spacer/>
+                  <Spacer />
                   <Button onClick={handleNextImage}>&gt;</Button>
                 </Flex>
               )}
@@ -172,13 +172,13 @@ const ResultAccordion = ({
   );
 };
 
-const RunResultSection = ({ 
-  onExecuteSuccess, 
-  getExecutionTrace, 
+const RunResultSection = ({
+  onExecuteSuccess,
+  getExecutionTrace,
   problemAnswer,
   numImages,
   setNumImages,
-  executedLineNumbers, 
+  executedLineNumbers,
   setExecutedLineNumbers,
   lineAndImageMapping,
   setLineAndImageMapping,
@@ -259,9 +259,9 @@ const RunResultSection = ({
                 <div className="right-buttons">
                   {shouldShowExecuteAndAnalyzeButtons() && (
                     <>
-                      <EditorButton 
-                        text={'실행'} 
-                        editorRef={editorRef} 
+                      <EditorButton
+                        text={'실행'}
+                        editorRef={editorRef}
                         onExecute={onExecuteSuccess}
                         getExecutionTrace={null}
                         setNumImages={setNumImages}
@@ -331,9 +331,9 @@ const RunResultSection = ({
           </div>
         </div>
         {activeEditor === 'editor' && (
-          <CodeEditor 
-            editorRef={editorRef} 
-            editorContent={editorContent} 
+          <CodeEditor
+            editorRef={editorRef}
+            editorContent={editorContent}
             highlightLine={executedLineNumbers[currentIndex] - 6}
             executePressed={executePressed}
           />
@@ -353,9 +353,9 @@ const RunResultSection = ({
       <div className="result-section" style={{ width: `${100 - runSectionWidth}%` }}>
         <div className='result-section'>
           <TurtleAccordion title={"실행 결과"} />
-          <ResultAccordion 
-            title={"코드 구조 및 실행 순서"} 
-            pre_id="structure" 
+          <ResultAccordion
+            title={"코드 구조 및 실행 순서"}
+            pre_id="structure"
             numImages={numImages}
             executedLineNumbers={executedLineNumbers}
             lineAndImageMapping={lineAndImageMapping}

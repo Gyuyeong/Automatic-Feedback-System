@@ -1,9 +1,9 @@
 'use client'
 
-import React , { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { DiffEditor } from '@monaco-editor/react';
 
-function CodeDiffEditor({writtenCode, answerCode}) {
+function CodeDiffEditor({ writtenCode, answerCode }) {
   return (
     <>
       <DiffEditor
