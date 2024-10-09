@@ -42,10 +42,16 @@ const EditorButton = ({
 
       if (codeValue.length > 0) {
 
-        // check if the first line is "from turtle import *"
-        const firstLine = codeValue.trim().split('\r\n')[0];
+        // check if the first line is "from turtle import *" and there should be more contents
+        const codeLines = codeValue.trim().split('\r\n');
+        // console.log(codeLines);
+        const firstLine = codeLines[0];
         if (firstLine !== "from turtle import *") {
           alert("Your code must start with the following line:\nfrom turtle import *");
+          return;
+        }
+        if (codeLines.length == 1) {
+          alert('Nothing to execute');
           return;
         }
         if (text === "실행") {

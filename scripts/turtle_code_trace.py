@@ -6,6 +6,5 @@ turtle.Turtle = Mock()
 screen = turtle.Screen()
 turtle.speed("fastest")
 
-for i in range(4):
-    fd(100)
-    left(90)
+fd(100)
+left(90)

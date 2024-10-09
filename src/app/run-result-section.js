@@ -1,176 +1,15 @@
 'use client'
 
-import React, { useEffect } from "react";
-import EditorButton from "./editor-button";
-import CodeEditor from "./code-editor";
-import CodeDiffEditor from "./code-diff-editor";
+import React from "react";
+import EditorButton from "./buttons/editor-button";
+import CodeEditor from "./editor/code-editor";
+import CodeDiffEditor from "./editor/code-diff-editor";
+import UtilityButton from "./buttons/utility-button";
+import TurtleAccordion from "./accordions/turtle-accordion";
+import ResultAccordion from "./accordions/result-accordion";
 import { useState, useRef } from 'react';
-import { Button, Stack } from '@chakra-ui/react';
-import { Box } from "@chakra-ui/react";
-import { Flex, Spacer, Center, Spinner } from '@chakra-ui/react';
-import {
-  Accordion,
-  AccordionItem,
-  AccordionButton,
-  AccordionPanel,
-  AccordionIcon,
-} from '@chakra-ui/react';
-import { Checkbox, CheckboxGroup } from "@chakra-ui/react";
-import { Text } from "@chakra-ui/react";
-
-// utility buttons
-// copy undo save
-const UtilityButton = ({ editorRef, text, url }) => {
-  const processCode = async () => {
-    const codeValue = editorRef.current.getValue();
-
-    if (codeValue.length > 0) {
-      if (text === 'Copy') {
-        navigator.clipboard.writeText(codeValue);  // copy to clipboard
-        alert("Copied to Clipboard");
-      }
-    }
-  };
-
-  const buttonStyle = {
-    backgroundImage: `url(/${url})`,
-    backgroundRepeat: 'no-repeat',
-    backgroundColor: 'inherit',
-  };
-
-  return <Button size='sm'
-    className='copy-button'
-    onClick={processCode}
-    style={buttonStyle}>
-  </Button>
-}
-
-const TurtleAccordion = ({ title }) => {
-  return (
-    <Accordion allowToggle bg="#111" border="none">
-      <AccordionItem>
-        <h2>
-          <AccordionButton bg='#111' color='gray' _expanded={{ bg: '#111', color: 'white' }}>
-            <Box as="span" flex='1' textAlign='left' fontSize="large" fontWeight="bold" ml="1px">
-              {title}
-            </Box>
-            <AccordionIcon />
-          </AccordionButton>
-        </h2>
-        <AccordionPanel bg="#fff" margin='10px'>
-          <pre id="output">
-
-          </pre>
-          <div id="turtle_canvas"></div>
-        </AccordionPanel>
-      </AccordionItem>
-    </Accordion>
-  )
-}
-
-// Store and show ast result
-const ResultAccordion = ({
-  title,
-  pre_id,
-  numImages,
-  executedLineNumbers,
-  lineAndImageMapping,
-  currentIndex,
-  setCurrentIndex,
-  isLoading,
-  setIsLoading
-}) => {
-  const [svgSrcs, setSvgSrcs] = useState(['/code_ast.svg']);
-  // const [isLoading, setIsLoading] = useState(false);
-
-  const fetchSvgFiles = async (linesToFetch) => {
-    const svgFiles = [];
-    for (let lineNumber of linesToFetch) {
-      try {
-        let filename = lineAndImageMapping[lineNumber];
-        const response = await fetch(filename);
-        if (response.ok) {
-          const svgData = await response.text();
-          svgFiles.push(`data:image/svg+xml;base64,${btoa(svgData)}`);
-        } else {
-          console.log(`Failed to fetch SVG file ${filename}`);
-        }
-      } catch (error) {
-        console.error(`Error fetching SVG file`, error);
-      }
-    }
-    return svgFiles;
-  };
-
-  const fetchImagesInBatches = async () => {
-    const batchSize = 50; // Adjust the batch size based on performance
-    let allSvgFiles = [];
-    for (let i = 0; i < executedLineNumbers.length; i += batchSize) {
-      const linesToFetch = executedLineNumbers.slice(i, i + batchSize);
-      const svgFiles = await fetchSvgFiles(linesToFetch);
-      allSvgFiles = [...allSvgFiles, ...svgFiles];
-      setSvgSrcs(allSvgFiles); // Update state progressively
-    }
-    setIsLoading(false);
-  };
-
-  const handleNextImage = () => {
-    setCurrentIndex((prevIndex) => (prevIndex + 1) % svgSrcs.length);
-  };
-
-  const handlePrevImage = () => {
-    setCurrentIndex((prevIndex) => (prevIndex - 1 + svgSrcs.length) % svgSrcs.length);
-  };
-
-  useEffect(() => {
-    setIsLoading(true);
-    setSvgSrcs(['/code_ast.svg']); // Reset to default image while loading
-    setCurrentIndex(0); // reset to the first image
-    fetchImagesInBatches(); // Start fetching images in batches
-  }, [numImages]);
-
-  return (
-    <Accordion allowToggle bg="#111" border="none">
-      <AccordionItem>
-        <h2>
-          <AccordionButton bg='#111' color='gray' _expanded={{ bg: '#111', color: 'white' }}>
-            <Box as="span" flex='1' textAlign='left' fontSize="large" fontWeight="bold" ml="1px">
-              {title}
-            </Box>
-            <AccordionIcon />
-          </AccordionButton>
-        </h2>
-        <AccordionPanel bg="#fff" margin='10px'>
-          {isLoading ? (
-            <Center height="200px">
-              <Flex direction="column" alignItems="center">
-                <Spinner size="xl" color="blue.500" />
-                <Text fontSize="xl" color="gray.600" mt="4" fontWeight="semibold">
-                  Analyzing...
-                </Text>
-              </Flex>
-            </Center>
-          ) : (
-            <>
-              {svgSrcs.length > 1 && (
-                <Flex justifyContent="center" alignItems="center">
-                  <Button onClick={handlePrevImage}>&lt;</Button>
-                  <Spacer />
-                  <Text>{`${currentIndex + 1}/${svgSrcs.length}`}</Text>
-                  <Spacer />
-                  <Button onClick={handleNextImage}>&gt;</Button>
-                </Flex>
-              )}
-              <pre id={pre_id}>
-                <img src={svgSrcs[currentIndex]} alt="SVG Preview" />
-              </pre>
-            </>
-          )}
-        </AccordionPanel>
-      </AccordionItem>
-    </Accordion>
-  );
-};
+import { Stack } from '@chakra-ui/react';
+import { Radio, RadioGroup } from "@chakra-ui/react";
 
 const RunResultSection = ({
   onExecuteSuccess,
@@ -241,18 +80,27 @@ const RunResultSection = ({
                     editorRef={editorRef}
                     text={'Copy'}
                     url={'copy_icon.svg'}
+                    setExecutePressed={setExecutePressed}
+                    setNumImages={setNumImages}
+                    setExecutedLineNumbers={setExecutedLineNumbers}
                   >
                   </UtilityButton>
                   <UtilityButton
                     editorRef={editorRef}
-                    text={'Undo'}
+                    text={'Reset'}
                     url={'undo_icon.svg'}
+                    setExecutePressed={setExecutePressed}
+                    setNumImages={setNumImages}
+                    setExecutedLineNumbers={setExecutedLineNumbers}
                   >
                   </UtilityButton>
                   <UtilityButton
                     editorRef={editorRef}
                     text={'Save'}
                     url={'save_icon.svg'}
+                    setExecutePressed={setExecutePressed}
+                    setNumImages={setNumImages}
+                    setExecutedLineNumbers={setExecutedLineNumbers}
                   >
                   </UtilityButton>
                 </div>
@@ -319,13 +167,13 @@ const RunResultSection = ({
           <div className="speed-section">
             {shouldShowButtons() && (
               <>
-                <CheckboxGroup colorScheme='blue'>
+                <RadioGroup colorScheme='blue'>
                   <Stack direction={['column', 'row']}>
-                    <Checkbox isChecked={checkedItem === 'slow'} onChange={() => handleCheckChange('slow')}>Slow</Checkbox>
-                    <Checkbox isChecked={checkedItem === 'normal'} onChange={() => handleCheckChange('normal')}>Normal</Checkbox>
-                    <Checkbox isChecked={checkedItem === 'fast'} onChange={() => handleCheckChange('fast')}>Fast</Checkbox>
+                    <Radio isChecked={checkedItem === 'slow'} onChange={() => handleCheckChange('slow')}>Slow</Radio>
+                    <Radio isChecked={checkedItem === 'normal'} onChange={() => handleCheckChange('normal')}>Normal</Radio>
+                    <Radio isChecked={checkedItem === 'fast'} onChange={() => handleCheckChange('fast')}>Fast</Radio>
                   </Stack>
-                </CheckboxGroup>
+                </RadioGroup>
               </>
             )}
           </div>
